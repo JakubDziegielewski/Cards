@@ -1,4 +1,3 @@
-from five_cards.player import Player
 from five_cards.bet import Bet
 from five_cards.call import Call
 from five_cards.hand import Hand
