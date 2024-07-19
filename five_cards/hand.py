@@ -28,6 +28,7 @@ class Hand:
         for key in self.players.keys().__iter__():
             player = self.players[key]
             deck.return_cards(player.get_cards())
+            player.set_cards(None)
 
     def get_players(self) -> dict:
         return self.players

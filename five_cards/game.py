@@ -31,7 +31,6 @@ class Game:
                 if actual_quantity >= current_bet.get_quantity()
                 else called_player_id
             )
-            hand.return_cards(self.deck)
             self.calculate_id_of_next_starting_player()
             loosing_player = self.game_state.get_players().get(loosing_player_id)
             loosing_player.add_one_card()
@@ -49,6 +48,7 @@ class Game:
                 actual_quantity,
                 player_eliminated,
             )
+            hand.return_cards(self.deck)
         winner = max(self.game_state.get_players().keys())
         self.console_interface.print_winner(winner)
 

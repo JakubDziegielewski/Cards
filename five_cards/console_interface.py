@@ -19,7 +19,7 @@ class ConsoleInterface:
         print(f"Player {player.get_id()}")
         input("Press enter when ready")
         print("\nYour cards:")
-        for card in sorted(player.cards):
+        for card in sorted(player.get_cards()):
             print(card)
         self.print_cards_number(hand)
         print(f"\nCurrent bet: {current_bet}")
