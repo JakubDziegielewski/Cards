@@ -109,5 +109,5 @@ class ConsoleInterface:
     def print_all_cards(self, hand: Hand) -> None:
         for player in hand.get_players().values():
             print(f"\nPlayer {player.get_id()}")
-            for card in player.get_cards():
+            for card in sorted(player.get_cards()):
                 print(card)
