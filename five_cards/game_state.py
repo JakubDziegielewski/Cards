@@ -7,7 +7,7 @@ class GameState:
         self.players = {id: Player(id) for id in range(number_of_players)}
         self.starting_player_id = 0
 
-    def get_players(self) -> dict:
+    def get_players(self) -> dict[int, Player]:
         return self.players
 
     def get_starting_player_id(self) -> int:

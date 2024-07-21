@@ -5,7 +5,7 @@ from five_cards.bet import Bet
 
 
 class Hand:
-    def __init__(self, players: dict, starting_player_id: int) -> None:
+    def __init__(self, players: dict[int, Player], starting_player_id: int) -> None:
         self.players = players
         self.starting_player_id = starting_player_id
         self.number_of_cards_per_player = {
@@ -14,7 +14,6 @@ class Hand:
         }
         self.cards_on_table = sum(self.number_of_cards_per_player.values())
         self.hand_state = HandState(starting_player_id)
-        self.is_finished = False
 
     def deal_cards(self, deck: Deck) -> None:
         deck.shuffle()
@@ -30,7 +29,7 @@ class Hand:
             deck.return_cards(player.get_cards())
             player.set_cards(None)
 
-    def get_players(self) -> dict:
+    def get_players(self) -> dict[int, Player]:
         return self.players
 
     def get_hand_state(self) -> HandState:
@@ -52,5 +51,5 @@ class Hand:
         current_player_id = self.hand_state.get_current_player_id()
         return self.players[current_player_id]
 
-    def get_number_of_cards_per_player(self) -> dict:
+    def get_number_of_cards_per_player(self) -> dict[int, int]:
         return self.number_of_cards_per_player
