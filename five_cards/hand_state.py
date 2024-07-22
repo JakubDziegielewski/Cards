@@ -24,3 +24,6 @@ class HandState:
 
     def get_bet_history(self) -> list[tuple[int, Bet]]:
         return self.bet_history
+    
+    def validate_a_bet(self, bet: Bet) -> bool:
+        return bet > self.current_bet

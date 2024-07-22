@@ -18,7 +18,7 @@ class Player:
     def get_id(self) -> int:
         return self.id
 
-    def get_cards(self) -> np.array:
+    def get_cards(self) -> np.ndarray:
         return self.cards
 
     def set_cards(self, cards: np.array) -> None:
