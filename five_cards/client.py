@@ -39,7 +39,6 @@ class Client:
                 response = self.socket.recv(1024)
             except TimeoutError:
                 pass
-                
 
     def receive_cards(self) -> np.ndarray[Card]:
         data = self.receive_a_message(1).decode()
@@ -172,7 +171,7 @@ class Client:
                 print(message.decode())
             else:
                 print(message.decode())
-        
+
     def play_game(self) -> None:
         message = self.receive_a_message()
         while message != b"You are out" and message != b"Game Over":

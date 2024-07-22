@@ -11,7 +11,6 @@ class Game:
     def __init__(self, number_of_players) -> None:
         self.game_state = GameState(number_of_players)
         self.deck = Deck([2, 9, 10, "J", "Q", "K", "A"])
-        
 
     def calculate_id_of_next_starting_player(self) -> None:
         id_of_starting_player = self.game_state.get_starting_player_id()

@@ -6,7 +6,6 @@ from five_cards.bet import Bet
 import numpy as np
 
 
-
 class Hand:
     def __init__(self, players: dict[int, Player], starting_player_id: int) -> None:
         self.players = players
@@ -33,7 +32,6 @@ class Hand:
         for player in self.players.values():
             player.set_cards(None)
 
-
     def get_players(self) -> dict[int, Player]:
         return self.players
 
@@ -58,13 +56,13 @@ class Hand:
 
     def get_number_of_cards_per_player(self) -> dict[int, int]:
         return self.number_of_cards_per_player
-    
+
     def get_id_of_called_player(self, calling_player_id: int) -> int:
         list_of_ids = list(self.players.keys())
         calling_player_index = list_of_ids.index(calling_player_id)
         called_player_index = (calling_player_index - 1) % len(self.get_players())
         return list_of_ids[called_player_index]
-    
+
     def calculate_actual_quantity(self, card_rank: Rank) -> int:
         actual_quantity = 0
         for player in self.players.values():
