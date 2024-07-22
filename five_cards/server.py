@@ -183,42 +183,6 @@ class Server:
         winner = max(game.get_game_state().get_players().keys())
         self.send_message_to_all_players(f"{winner}")
 
-    #        action = game.get_console_interface.decide_on_action(hand)
-    #        while type(action) is not Call:
-    #            hand.update_a_bet(action)
-    #            action = game.console_interface.decide_on_action(hand)
-    #        calling_player_id = hand.get_hand_state().get_current_player_id()
-    #        called_player_id = game.get_id_of_called_player(hand, calling_player_id)
-    #        current_bet = hand.get_hand_state().get_current_bet()
-    #        actual_quantity = game.calculate_actual_quantity(
-    #            hand, current_bet.get_card_rank()
-    #        )
-    #        loosing_player_id = (
-    #            calling_player_id
-    #            if actual_quantity >= current_bet.get_quantity()
-    #            else called_player_id
-    #        )
-    #        game.calculate_id_of_next_starting_player()
-    #        loosing_player = game.game_state.get_players().get(loosing_player_id)
-    #        loosing_player.add_one_card()
-    #        player_eliminated = loosing_player.check_if_lost()
-    #        if player_eliminated:
-    #            if loosing_player_id == game.game_state.get_starting_player_id():
-    #                game.calculate_id_of_next_starting_player()
-    #            game.game_state.get_players().pop(loosing_player_id)
-    #
-    #        self.console_interface.print_hand_result(
-    #            hand,
-    #            called_player_id,
-    #            calling_player_id,
-    #            current_bet,
-    #            actual_quantity,
-    #            player_eliminated,
-    #        )
-    #        hand.return_cards(self.deck)
-    #    winner = max(self.game_state.get_players().keys())
-    #    self.console_interface.print_winner(winner)
-
     def run_server(self) -> None:
         try:
             socket = self.start_server()
