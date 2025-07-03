@@ -50,7 +50,7 @@ class Card:
         self.rank = rank
         self.suit = suit
 
-    def __str__(self) -> str:
+    def __repr__(self) -> str:
         return self.rank.name + " of " + self.suit.name + "s"
 
     def __eq__(self, card: object) -> bool:
