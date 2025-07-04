@@ -15,6 +15,7 @@ class Game:
 
     def start_hand(self):
         self.deck.reset()
-        hand = Hand(self.game_state, self.deck)
+        hand = Hand(self.game_state, self.deck, 2)
         hand.deal_cards()
         print(hand.players)
+        hand.betting_round()
