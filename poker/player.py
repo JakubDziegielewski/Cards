@@ -13,6 +13,7 @@ class Player:
         self.stack = stack
         self.current_bet = Bet(0)
         self.is_all_in = False
+        self.has_folded = False
 
     def get_cards(self) -> np.ndarray[Card, 2] | None:
         return self.cards
@@ -34,7 +35,7 @@ class Player:
         
     def make_a_bet(self, size: int) -> Bet:
         max_size = self.find_max_bet_size()
-        if max_size < size:
+        if max_size <= size:
             size = max_size
             self.is_all_in = True
         new_bet = Bet(size)
@@ -45,7 +46,7 @@ class Player:
     def call_a_bet(self, bet: Bet) -> Call:
         max_size = self.find_max_bet_size()
         call_size = bet.size
-        if bet.size > max_size:
+        if bet.size >= max_size:
             call_size = max_size
             self.is_all_in = True
         
@@ -76,13 +77,20 @@ class Player:
             for i, action in enumerate(legal_actions, start=1):
                 print(f"{i}. {action}")
             chosen_action = input("Enter selection: ")
+        if chosen_action == "1":
+            self.has_folded = True
+            return Fold()
         if chosen_action == "2":
             self.call_a_bet(current_bet)
             return Call(current_bet)
         if chosen_action == "3":
-            bet_size = int(input("Enter bet size: "))
-            if bet_size > current_bet.size:
-                return self.make_a_bet(bet_size)
+            correct_value = False
+            while not correct_value:
+                bet_size = int(input("Enter bet size: "))
+                if bet_size > current_bet.size:
+                    correct_value = True
+            return self.make_a_bet(bet_size)
+                
              
             
                 

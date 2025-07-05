@@ -1,5 +1,4 @@
 
-
 class HandState:
     def __init__(self):
-        pass
+        self.hand_history = []
