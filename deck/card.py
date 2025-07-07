@@ -10,7 +10,7 @@ class Rank(Enum):
     Seven = 7
     Eight = 8
     Nine = 9
-    Ten = 10
+    Ten = "T"
     Jack = "J"
     Queen = "Q"
     King = "K"
@@ -19,7 +19,7 @@ class Rank(Enum):
     def __gt__(self, other: object):
         if type(other) is not Rank:
             raise ValueError("Cannot compare these two objects")
-        face_values = {"J": 11, "Q": 12, "K": 13, "A": 14}
+        face_values = {"T": 10, "J": 11, "Q": 12, "K": 13, "A": 14}
         self_value = self.value
         other_value = other.value
         if type(self.value) is str:
@@ -49,6 +49,18 @@ class Card:
             raise ValueError("Invalid Suit value")
         self.rank = rank
         self.suit = suit
+        self.tag = str(self.rank.value) + self.suit.value[0]
+        self.card_number = Card.define_card_number(rank, suit)
+        
+    @staticmethod
+    def define_card_number(rank: Rank, suit: Suit) -> int:
+        suit_table = {"club": 0, "diamond": 1, "heart": 2, "spade": 3}
+        face_values = {"T": 10, "J": 11, "Q": 12, "K": 13, "A": 14}
+        value = rank.value
+        if type(rank.value) is str:
+            value = face_values[rank.value]
+        return 4 * (value - 2) + suit_table[suit.value]
+            
 
     def __repr__(self) -> str:
         return self.rank.name + " of " + self.suit.name + "s"
@@ -60,6 +72,9 @@ class Card:
 
     def __lt__(self, other: object) -> bool:
         return self.rank < other.get_rank()
+
+    def __gt__(self, other: object) -> bool:
+        return self.rank > other.get_rank()
 
     def get_rank(self) -> Rank:
         return self.rank
