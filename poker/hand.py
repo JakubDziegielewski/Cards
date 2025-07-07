@@ -1,5 +1,6 @@
 from poker.game_state import GameState
 from deck.deck import Deck
+from deck.card import Card, Rank, Suit
 from poker.hand_state import HandState
 from poker.bet import Bet
 from poker.call import Call
@@ -28,9 +29,12 @@ class Hand:
         for player in self.players:
             cards = self.deck.draw_cards(2)
             player.set_cards(cards)
-        self.flop = self.deck.draw_cards(3)
-        self.turn = self.deck.draw_cards(1)
-        self.river = self.deck.draw_cards(1)
+        #self.flop = self.deck.draw_cards(3)
+        #self.turn = self.deck.draw_cards(1)
+        #self.river = self.deck.draw_cards(1)
+        self.flop = np.array([Card(Rank("A"), Suit("spade")), Card(Rank("K"), Suit("spade")), Card(Rank("Q"), Suit("spade"))])
+        self.turn = np.array([Card(Rank("J"), Suit("spade"))])
+        self.river = np.array([Card(Rank("T"), Suit("spade"))])
         small_bet = self.players[self.small_blind_player_id].make_a_bet(self.big_blind//2)
         big_bet = self.players[self.big_blind_player_id].make_a_bet(self.big_blind)
         self.pot = small_bet.size + big_bet.size
@@ -44,18 +48,25 @@ class Hand:
             big_blind_player_id = (dealer + 2) % self.players.size
         return small_blind_player_id, big_blind_player_id
 
-    def betting_round(self, current_player_id):
+    def betting_round(self, current_player_id) -> int | None:
         self.acted_in_round = np.zeros(self.acted_in_round.shape, dtype=bool)
         current_player_id = (self.big_blind_player_id + 1) % self.players.size
         while not all(self.acted_in_round) and self.active_players > 1:
             current_player = self.players[current_player_id]
+            if current_player.has_folded or current_player.is_all_in:
+                self.acted_in_round[current_player_id] = True
+                current_player_id = (current_player_id + 1) % self.players.size
+                continue
+            print(f"Current player: {current_player_id}")
+            
             current_player_bet_size = current_player.current_bet.size
             decision = current_player.make_decision(self.current_bet, self.players)
             if type(decision) is Fold:
+                self.acted_in_round[current_player_id] = True
                 self.active_players -= 1
                 if self.active_players == 1:
                     index = [i for i, player in enumerate(self.players) if not player.has_folded][0]
-                    self.players[index].stack += self.pot
+                    return index
             elif type(decision) is Bet:
                 self.acted_in_round = np.zeros(self.acted_in_round.shape, dtype=bool)
                 self.current_bet = decision
