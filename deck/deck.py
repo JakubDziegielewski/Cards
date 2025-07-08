@@ -7,10 +7,12 @@ class Deck:
     def __init__(self, ranks: list = None, suits: list = None) -> None:
         self.ranks = ranks
         self.suits = suits
-        self.reset()
+        self.init_deck()
         self.deck_size = self.cards.size
+        self.init_cards = self.cards
+        self.init_size = self.init_cards.size
 
-    def reset(self) -> None:
+    def init_deck(self) -> None:
         if self.ranks is None and self.suits is None:
             self.cards = np.array([Card(rank, suit) for rank in Rank for suit in Suit])
         elif self.suits is None:
@@ -29,7 +31,13 @@ class Deck:
                     for suit in map(Suit, self.suits)
                 ]
             )
+        self.deck_size = self.cards.size
 
+    def reset(self) -> None:
+        self.cards = self.init_cards
+        self.deck_size = self.init_size
+        
+        
     def shuffle(self) -> None:
         np.random.shuffle(self.cards[: self.deck_size])
 

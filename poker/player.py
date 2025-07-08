@@ -76,17 +76,27 @@ class Player:
             print("Choose action:")    
             for i, action in enumerate(legal_actions, start=1):
                 print(f"{i}. {action}")
-            chosen_action = input("Enter selection: ")
+            #chosen_action = input("Enter selection: ")
+            #chosen_action = "2"
+            action = np.random.choice(legal_actions)
+            lookup_table = {
+                "fold": "1",
+                "check": "2",
+                "call": "2",
+                "bet": "3"
+            }
+            chosen_action = lookup_table[action]
         if chosen_action == "1":
             self.has_folded = True
             return Fold()
         if chosen_action == "2":
-            self.call_a_bet(current_bet)
-            return Call(current_bet)
+            call = self.call_a_bet(current_bet)
+            return Call(call)
         if chosen_action == "3":
             correct_value = False
             while not correct_value:
-                bet_size = int(input("Enter bet size: "))
+                #bet_size = int(input("Enter bet size: "))
+                bet_size = current_bet.size + 40
                 if bet_size > current_bet.size:
                     correct_value = True
             return self.make_a_bet(bet_size)
