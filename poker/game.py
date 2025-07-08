@@ -41,7 +41,23 @@ class Game:
             self.game_state.current_dealer + 1
         ) % self.game_state.players.size
         winner_id = None
-        if hand.active_players - hand.players_all_in > 0:
+        if hand.active_players - hand.players_all_in == 1:
+            if hand.players.size == 3:
+                winner_id = hand.betting_round(first_to_act)
+                if winner_id is not None:
+                    self.finish_game_after_betting(winner_id, hand)
+                    return
+            elif hand.players[hand.big_blind_player_id].is_all_in and hand.players[hand.big_blind_player_id].current_bet.size > hand.players[hand.small_blind_player_id].current_bet.size:
+                winner_id = hand.betting_round(first_to_act)
+                if winner_id is not None:
+                    self.finish_game_after_betting(winner_id, hand)
+                    return
+        elif hand.active_players - hand.players_all_in > 1:
+            winner_id = hand.betting_round(first_to_act)
+            if winner_id is not None:
+                self.finish_game_after_betting(winner_id, hand)
+                return
+        elif (hand.active_players - hand.players_all_in == 1 and hand.players[hand.big_blind_player_id].is_all_in):
             winner_id = hand.betting_round(first_to_act)
             if winner_id is not None:
                 self.finish_game_after_betting(winner_id, hand)
@@ -124,7 +140,7 @@ class Game:
             print(self.game_state.players, end="\n\n")
             self.check_for_eliminated_players()
             self.game_state.change_dealer()
-            if sum(x.stack for x in self.game_state.players) > 3000:
+            if sum(x.stack for x in self.game_state.players) > 5000:
                 exit(1)
         print(f"Rounds: {rounds}")
         return self.game_state.players[0].id
