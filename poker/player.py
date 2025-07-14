@@ -63,7 +63,7 @@ class Player:
     def fold(self):
         pass
     
-    def make_decision(self, hand_state: HandState, bet_size:int, number_of_bets:int) -> Bet | Call | Fold:
+    def make_decision(self, hand_state: HandState, bet_size:int, number_of_bets:int, decision_model = None) -> Bet | Call | Fold:
         current_bet = hand_state.current_bet
         print(f"Current bet: {current_bet.size}")
         legal_actions = ["fold"]

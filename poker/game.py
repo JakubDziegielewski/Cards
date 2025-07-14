@@ -63,6 +63,7 @@ class Game:
                 self.finish_game_after_betting(winner_id, hand)
                 return
         hand.hand_state.public_cards = hand.flop
+        hand.hand_state.next_round()
         print(hand.hand_state.public_cards)
         if hand.active_players - hand.players_all_in > 1:
             winner_id = hand.play_betting_round(first_to_act_after_flop, self.big_blind)
@@ -70,6 +71,7 @@ class Game:
                 self.finish_game_after_betting(winner_id, hand)
                 return
         hand.hand_state.public_cards = np.concatenate((hand.hand_state.public_cards, hand.turn))
+        hand.hand_state.next_round()
         print(hand.hand_state.public_cards)
         if hand.active_players - hand.players_all_in > 1:
             hand.play_betting_round(first_to_act_after_flop, self.big_blind * 2)
@@ -77,6 +79,7 @@ class Game:
                 self.finish_game_after_betting(winner_id, hand)
                 return
         hand.hand_state.public_cards = np.concatenate((hand.hand_state.public_cards, hand.river))
+        hand.hand_state.next_round()
         print(hand.hand_state.public_cards)
         if hand.active_players - hand.players_all_in > 1:
             winner_id = hand.play_betting_round(first_to_act_after_flop, self.big_blind * 2)

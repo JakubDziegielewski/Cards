@@ -76,6 +76,7 @@ class Hand:
             print(type(decision))
             if type(decision) is Fold:
                 self.acted_in_round[current_player_id] = True
+                self.hand_state.add_action("F")
                 self.active_players -= 1
                 if self.active_players == 1:
                     index = [i for i, player in enumerate(self.players) if not player.has_folded][0]
@@ -85,16 +86,19 @@ class Hand:
                 self.acted_in_round = np.zeros(self.acted_in_round.shape, dtype=bool)
                 self.hand_state.current_bet = decision
                 self.acted_in_round[current_player_id] = True
+                self.hand_state.add_action("B")
                 self.hand_state.pot += self.hand_state.current_bet.size - current_player_bet_size
                 if current_player.is_all_in:
                     self.players_all_in += 1
             elif type(decision) is Call:
                 self.acted_in_round[current_player_id] = True
+                self.hand_state.add_action("C")
                 self.hand_state.pot += decision.size - current_player_bet_size
                 if current_player.is_all_in:
                     self.players_all_in += 1
             else:
                 self.acted_in_round[current_player_id] = True
+                self.hand_state.add_action("P")
             current_player_id = (current_player_id + 1) % self.players.size
     
     
