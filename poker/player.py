@@ -4,6 +4,7 @@ from poker.bet import Bet
 from poker.call import Call
 from poker.fold import Fold
 from poker.check import Check
+from poker.hand_state import HandState
 
 
 class Player:
@@ -62,7 +63,8 @@ class Player:
     def fold(self):
         pass
     
-    def make_decision(self, current_bet: Bet, bet_size:int, number_of_bets:int) -> Bet | Call | Fold:
+    def make_decision(self, hand_state: HandState, bet_size:int, number_of_bets:int) -> Bet | Call | Fold:
+        current_bet = hand_state.current_bet
         print(f"Current bet: {current_bet.size}")
         legal_actions = ["fold"]
         if self.is_check_legal(current_bet):
@@ -76,16 +78,16 @@ class Player:
             print("Choose action:")    
             for i, action in enumerate(legal_actions, start=1):
                 print(f"{i}. {action}")
-            chosen_action = input("Enter selection: ")
+            #chosen_action = input("Enter selection: ")
             #chosen_action = "2"
-            #action = np.random.choice(legal_actions)
-            #lookup_table = {
-            #    "fold": "1",
-            #    "check": "2",
-            #    "call": "2",
-            #    "bet": "3"
-            #}
-            #chosen_action = lookup_table[action]
+            action = np.random.choice(legal_actions)
+            lookup_table = {
+                "fold": "1",
+                "check": "2",
+                "call": "2",
+                "bet": "3"
+            }
+            chosen_action = lookup_table[action]
         if chosen_action == "1":
             self.has_folded = True
             return Fold()

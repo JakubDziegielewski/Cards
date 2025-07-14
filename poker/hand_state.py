@@ -2,6 +2,7 @@
 class HandState:
     def __init__(self):
         self.current_round = 0
+        self.current_bet = None
         self.pot = 0
         self.history = {
             0: [],

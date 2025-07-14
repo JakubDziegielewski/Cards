@@ -8,7 +8,7 @@ from poker.fold import Fold
 import numpy as np
 
 class Hand:
-    def __init__(self, init_game_state: GameState, deck: Deck, big_blind = 2):
+    def __init__(self, init_game_state: GameState, deck: Deck, big_blind:int = 2):
         self.game_state = init_game_state
         self.players = self.game_state.players
         self.acted_in_round = np.zeros(self.players.shape, dtype=bool) #table of booleans indicating if a player acted in the current round of betting
@@ -16,7 +16,6 @@ class Hand:
         self.hand_state = HandState()
         self.deck = deck
         self.big_blind = big_blind
-        self.current_bet = Bet(big_blind)
         self.dealer = self.game_state.current_dealer
         self.small_blind_player_id, self.big_blind_player_id = self.define_big_and_small_blinds(self.dealer)
         self.active_players = self.players.size
@@ -49,6 +48,7 @@ class Hand:
         if self.players[self.big_blind_player_id].is_all_in:
             self.players_all_in += 1
         self.hand_state.pot = small_bet.size + big_bet.size
+        self.hand_state.current_bet = Bet(self.big_blind)
 
     def define_big_and_small_blinds(self, dealer):
         if self.players.size == 2:
@@ -72,7 +72,7 @@ class Hand:
             print(f"Current player: {current_player.id}")
             
             current_player_bet_size = current_player.current_bet.size
-            decision = current_player.make_decision(self.current_bet, bet_size=bet_size, number_of_bets=number_of_bets)
+            decision = current_player.make_decision(self.hand_state, bet_size=bet_size, number_of_bets=number_of_bets)
             print(type(decision))
             if type(decision) is Fold:
                 self.acted_in_round[current_player_id] = True
@@ -83,9 +83,9 @@ class Hand:
             elif type(decision) is Bet:
                 number_of_bets += 1
                 self.acted_in_round = np.zeros(self.acted_in_round.shape, dtype=bool)
-                self.current_bet = decision
+                self.hand_state.current_bet = decision
                 self.acted_in_round[current_player_id] = True
-                self.hand_state.pot += self.current_bet.size - current_player_bet_size
+                self.hand_state.pot += self.hand_state.current_bet.size - current_player_bet_size
                 if current_player.is_all_in:
                     self.players_all_in += 1
             elif type(decision) is Call:
