@@ -62,41 +62,43 @@ class Player:
     def fold(self):
         pass
     
-    def make_decision(self, current_bet: Bet, list_of_players: np.ndarray) -> Bet | Call | Fold:
+    def make_decision(self, current_bet: Bet, bet_size:int, number_of_bets:int) -> Bet | Call | Fold:
         print(f"Current bet: {current_bet.size}")
         legal_actions = ["fold"]
         if self.is_check_legal(current_bet):
             legal_actions.append("check")
         else:
             legal_actions.append("call")
-        if self.is_bet_legal(current_bet):
+        if number_of_bets < 4 and self.is_bet_legal(current_bet):
             legal_actions.append("bet")
         chosen_action = " "
         while chosen_action not in ["1", "2", "3"]:
             print("Choose action:")    
             for i, action in enumerate(legal_actions, start=1):
                 print(f"{i}. {action}")
-            #chosen_action = input("Enter selection: ")
+            chosen_action = input("Enter selection: ")
             #chosen_action = "2"
-            action = np.random.choice(legal_actions)
-            lookup_table = {
-                "fold": "1",
-                "check": "2",
-                "call": "2",
-                "bet": "3"
-            }
-            chosen_action = lookup_table[action]
+            #action = np.random.choice(legal_actions)
+            #lookup_table = {
+            #    "fold": "1",
+            #    "check": "2",
+            #    "call": "2",
+            #    "bet": "3"
+            #}
+            #chosen_action = lookup_table[action]
         if chosen_action == "1":
             self.has_folded = True
             return Fold()
         if chosen_action == "2":
+            if "check" in legal_actions:
+                return Check()
             call = self.call_a_bet(current_bet)
             return Call(call)
         if chosen_action == "3":
             correct_value = False
             while not correct_value:
                 #bet_size = int(input("Enter bet size: "))
-                bet_size = current_bet.size + 40
+                bet_size = current_bet.size + bet_size
                 if bet_size > current_bet.size:
                     correct_value = True
             return self.make_a_bet(bet_size)

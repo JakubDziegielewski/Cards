@@ -43,50 +43,51 @@ class Game:
         winner_id = None
         if hand.active_players - hand.players_all_in == 1:
             if hand.players.size == 3:
-                winner_id = hand.betting_round(first_to_act)
+                winner_id = hand.play_betting_round(first_to_act)
                 if winner_id is not None:
                     self.finish_game_after_betting(winner_id, hand)
                     return
             elif hand.players[hand.big_blind_player_id].is_all_in and hand.players[hand.big_blind_player_id].current_bet.size > hand.players[hand.small_blind_player_id].current_bet.size:
-                winner_id = hand.betting_round(first_to_act)
+                winner_id = hand.play_betting_round(first_to_act)
                 if winner_id is not None:
                     self.finish_game_after_betting(winner_id, hand)
                     return
         elif hand.active_players - hand.players_all_in > 1:
-            winner_id = hand.betting_round(first_to_act)
+            winner_id = hand.play_betting_round(first_to_act, self.big_blind)
             if winner_id is not None:
                 self.finish_game_after_betting(winner_id, hand)
                 return
         elif (hand.active_players - hand.players_all_in == 1 and hand.players[hand.big_blind_player_id].is_all_in):
-            winner_id = hand.betting_round(first_to_act)
+            winner_id = hand.play_betting_round(first_to_act, self.big_blind)
             if winner_id is not None:
                 self.finish_game_after_betting(winner_id, hand)
                 return
-        print(np.array2string(hand.flop, separator="; "))
+        hand.hand_state.public_cards = hand.flop
+        print(hand.hand_state.public_cards)
         if hand.active_players - hand.players_all_in > 1:
-            winner_id = hand.betting_round(first_to_act_after_flop)
+            winner_id = hand.play_betting_round(first_to_act_after_flop, self.big_blind)
             if winner_id is not None:
                 self.finish_game_after_betting(winner_id, hand)
                 return
-        print(hand.turn)
+        hand.hand_state.public_cards = np.concatenate((hand.hand_state.public_cards, hand.turn))
+        print(hand.hand_state.public_cards)
         if hand.active_players - hand.players_all_in > 1:
-            hand.betting_round(first_to_act_after_flop)
+            hand.play_betting_round(first_to_act_after_flop, self.big_blind * 2)
             if winner_id is not None:
                 self.finish_game_after_betting(winner_id, hand)
                 return
-        print(hand.river)
+        hand.hand_state.public_cards = np.concatenate((hand.hand_state.public_cards, hand.river))
+        print(hand.hand_state.public_cards)
         if hand.active_players - hand.players_all_in > 1:
-            winner_id = hand.betting_round(first_to_act_after_flop)
+            winner_id = hand.play_betting_round(first_to_act_after_flop, self.big_blind * 2)
         if winner_id is not None:
             self.finish_game_after_betting(winner_id, hand)
             return
         else:
             self.define_winners(hand)
-        # print(hand.flop, hand.turn, hand.river)
-        # print(self.game_state.players)
 
     def finish_game_after_betting(self, winner_id: int, hand: Hand) -> None:
-        self.game_state.players[winner_id].stack += hand.pot
+        self.game_state.players[winner_id].stack += hand.hand_state.pot
         for player in self.game_state.players:
             player.current_bet.size = 0
 
@@ -105,7 +106,7 @@ class Game:
         self.calculate_earnings(results, hand)
 
     def calculate_earnings(self, results, hand) -> None:
-        while hand.pot > 1:  # TODO: add one chip to the player closest to the dealer
+        while hand.hand_state.pot > 1:  # TODO: add one chip to the player closest to the dealer
             best_hand = min(results.keys())
             winners_ids = results[best_hand]
             number_of_winners = len(winners_ids)
@@ -113,7 +114,7 @@ class Game:
             for winner_id in winners_ids:
                 winner = hand.players[winner_id]
                 winner.stack += winner.current_bet.size
-                hand.pot -= winner.current_bet.size
+                hand.hand_state.pot -= winner.current_bet.size
                 max_win_from_one_player = winner.current_bet.size // number_of_winners
                 winner.current_bet.size = 0
                 for i, p in enumerate(hand.players):
@@ -121,7 +122,7 @@ class Game:
                         continue
                     winnings = min(max_win_from_one_player, p.current_bet.size)
                     p.current_bet.size -= winnings
-                    hand.pot -= winnings
+                    hand.hand_state.pot -= winnings
                     winner.stack += winnings
             results.pop(best_hand)
 
@@ -140,7 +141,7 @@ class Game:
             print(self.game_state.players, end="\n\n")
             self.check_for_eliminated_players()
             self.game_state.change_dealer()
-            if sum(x.stack for x in self.game_state.players) > 5000:
+            if sum(x.stack for x in self.game_state.players) > 4000:
                 exit(1)
         print(f"Rounds: {rounds}")
         return self.game_state.players[0].id
