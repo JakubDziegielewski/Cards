@@ -43,12 +43,12 @@ class Game:
         winner_id = None
         if hand.active_players - hand.players_all_in == 1:
             if hand.players.size == 3:
-                winner_id = hand.play_betting_round(first_to_act)
+                winner_id = hand.play_betting_round(first_to_act, self.big_blind)
                 if winner_id is not None:
                     self.finish_game_after_betting(winner_id, hand)
                     return
             elif hand.players[hand.big_blind_player_id].is_all_in and hand.players[hand.big_blind_player_id].current_bet.size > hand.players[hand.small_blind_player_id].current_bet.size:
-                winner_id = hand.play_betting_round(first_to_act)
+                winner_id = hand.play_betting_round(first_to_act, self.big_blind)
                 if winner_id is not None:
                     self.finish_game_after_betting(winner_id, hand)
                     return
