@@ -79,7 +79,6 @@ class Player:
             for i, action in enumerate(legal_actions, start=1):
                 print(f"{i}. {action}")
             #chosen_action = input("Enter selection: ")
-            #chosen_action = "2"
             action = np.random.choice(legal_actions)
             lookup_table = {
                 "fold": "1",

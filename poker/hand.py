@@ -23,7 +23,6 @@ class Hand:
         
     
     def deal_cards(self) -> None:
-        self.deck.reset()
         self.deck.shuffle()
         for player in self.players:
             cards = self.deck.draw_cards(2)
@@ -31,8 +30,6 @@ class Hand:
             player.has_folded = False
             player.is_all_in = False
         self.flop = self.deck.draw_cards(3)
-        if self.flop.size < 3:
-            print("here")
         self.turn = self.deck.draw_cards(1)
         self.river = self.deck.draw_cards(1)
         #self.players[0].cards = np.array([Card(Rank(6), Suit("diamond")), Card(Rank("T"), Suit("diamond"))])
