@@ -81,3 +81,6 @@ class Card:
 
     def get_suit(self) -> Suit:
         return self.suit
+    
+    def get_tag(self) -> str:
+        return self.tag
