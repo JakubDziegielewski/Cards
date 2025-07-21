@@ -32,7 +32,11 @@ class Rank(Enum):
         if type(other) is not Rank:
             raise ValueError("Cannot compare these two objects")
         return other > self
-
+    
+    def __eq__(self, other: object):
+        if type(other) is not Rank:
+            raise ValueError("Cannot compare these two objects")
+        return not self > other and not other > self
 
 class Suit(Enum):
     Spade = "spade"
