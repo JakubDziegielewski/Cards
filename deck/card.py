@@ -38,6 +38,9 @@ class Rank(Enum):
             raise ValueError("Cannot compare these two objects")
         return not self > other and not other > self
 
+    def __hash__(self):
+        return hash(self.value)
+
 class Suit(Enum):
     Spade = "spade"
     Club = "club"
