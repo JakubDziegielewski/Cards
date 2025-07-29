@@ -46,6 +46,11 @@ class Suit(Enum):
     Club = "club"
     Diamond = "diamond"
     Heart = "heart"
+    
+    def __eq__(self, other):
+        return self.value == other.value
+    def __hash__(self):
+        return hash(self.value)
 
 
 class Card:
@@ -82,6 +87,9 @@ class Card:
 
     def __gt__(self, other: object) -> bool:
         return self.rank > other.get_rank()
+    
+    def __hash__(self):
+        return hash(self.tag)
 
     def get_rank(self) -> Rank:
         return self.rank
