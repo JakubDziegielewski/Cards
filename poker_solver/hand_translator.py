@@ -1,5 +1,5 @@
 from deck.deck import Deck
-from deck.card import Card, Rank, Suit
+from deck.card import Card, Suit
 import numpy as np
 from itertools import permutations
 from collections import Counter
