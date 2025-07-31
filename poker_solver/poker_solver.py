@@ -7,7 +7,7 @@ from poker_solver.node import Node
 from poker_solver.node_group import NodeGroup
 import numpy as np
 from phevaluator.evaluator import evaluate_cards
-from math import isnan
+from functools import cache
 
 class PokerSolver:
     def __init__(self, buckets:int) -> None:
@@ -27,9 +27,27 @@ class PokerSolver:
         for sequence in sequence_generator.get_all_sequences():
             self.node_groups[sequence.betting_sequence] = NodeGroup(sequence, buckets)
     
+    
     def find_result(self, betting_sequence:tuple) -> int:
+        reward = PokerSolver.calculate_reward(betting_sequence)
+        if betting_sequence[-1][-1] == "F":
+            if len(betting_sequence[-1]) % 2 == 1:
+                return reward
+            else:
+                return -reward
+        else:
+            if self.small_blind_strength < self.big_blind_strength:
+                return reward
+            elif self.small_blind_strength > self.big_blind_strength:
+                return -reward
+            else:
+                return 0
+    
+    @cache
+    @staticmethod
+    def calculate_reward(betting_sequence:tuple):
         if betting_sequence[0] == "BF":
-            return -1
+            return 1
         if betting_sequence[0] == "BCF":
             return 2
         reward = 0
@@ -39,33 +57,18 @@ class PokerSolver:
             if sequence[-1] == "F":
                 result -= 2
             reward += max(0, result * multiplier)
-        if betting_sequence[-1][-1] == "F":
-            if len(betting_sequence[-1]) % 2 == 1:
-                return reward
-            else:
-                return -reward
-        else:
-            if self.strength_one < self.strength_two:
-                return reward
-            elif self.strength_one > self.strength_two:
-                return -reward
-            else:
-                return 0
-        
+        return reward
+    
     
     def counterfactual_regret_minimization(self, betting_sequence:tuple, small_blind_player_turn:bool, pi_one:float, pi_two:float)->float:
         node_group = self.node_groups[betting_sequence]
         if node_group.ends_hand:
-            res = self.find_result(betting_sequence)
-            if isnan(res):
-                raise ValueError(betting_sequence)
-            return res
+            return self.find_result(betting_sequence)
         elif node_group.ends_round:
             betting_sequence = betting_sequence + ("",)
             return self.counterfactual_regret_minimization(betting_sequence, False, pi_one, pi_two)
         phase = len(betting_sequence) - 1
-        cards = self.small_blind_cards if small_blind_player_turn else self.big_blind_cards
-        bucket_number = self.find_bucket_number(phase, cards)
+        bucket_number = self.small_blind_cards_buckets[phase] if small_blind_player_turn else self.big_blind_cards_buckets[phase]
         node = self.node_groups[betting_sequence][bucket_number]
         node.visited += 1
         counterfactual_value = 0
@@ -84,11 +87,7 @@ class PokerSolver:
                 action_counterfactual_values[i] = self.counterfactual_regret_minimization(new_sequence, not small_blind_player_turn, strategy[i] * pi_one, pi_two)
             else:
                 action_counterfactual_values[i] = self.counterfactual_regret_minimization(new_sequence, not small_blind_player_turn, pi_one, strategy[i] * pi_two)
-            if isnan(action_counterfactual_values[i]):
-                pass
             counterfactual_value += strategy[i] * action_counterfactual_values[i]
-            if betting_sequence == ("B",):
-                pass
         if small_blind_player_turn:
             regret_reach = pi_two
             strategy_reach = pi_one
@@ -145,8 +144,10 @@ class PokerSolver:
         self.flop = self.deck.draw_cards(3)
         self.turn = self.deck.draw_cards(1)
         self.river = self.deck.draw_cards(1)
-        self.strength_one = evaluate_cards(*[card.get_tag() for card in np.concatenate((self.small_blind_cards, self.flop, self.turn, self.river))])
-        self.strength_two = evaluate_cards(*[card.get_tag() for card in np.concatenate((self.big_blind_cards, self.flop, self.turn, self.river))])
+        self.small_blind_cards_buckets = [self.find_bucket_number(phase, self.small_blind_cards) for phase in range(4)]
+        self.big_blind_cards_buckets = [self.find_bucket_number(phase, self.big_blind_cards) for phase in range(4)]
+        self.small_blind_strength = evaluate_cards(*[card.get_tag() for card in np.concatenate((self.small_blind_cards, self.flop, self.turn, self.river))])
+        self.big_blind_strength = evaluate_cards(*[card.get_tag() for card in np.concatenate((self.big_blind_cards, self.flop, self.turn, self.river))])
     
     def _return_cards(self) -> None:
         self.deck.return_cards(self.small_blind_cards)
