@@ -56,21 +56,19 @@ class Hand:
             big_blind_player_id = (dealer + 2) % self.players.size
         return small_blind_player_id, big_blind_player_id
 
-    def play_betting_round(self, current_player_id, bet_size) -> int | None:
+    def play_betting_round(self, current_player_id, bet_size, number_of_bets=0) -> int | None:
         self.acted_in_round = np.zeros(self.acted_in_round.shape, dtype=bool)
-        #current_player_id = (self.big_blind_player_id + 1) % self.players.size
-        number_of_bets = 0
         while not all(self.acted_in_round) and self.active_players > 1:
             current_player = self.players[current_player_id]
             if current_player.has_folded or current_player.is_all_in:
                 self.acted_in_round[current_player_id] = True
                 current_player_id = (current_player_id + 1) % self.players.size
                 continue
-            print(f"Current player: {current_player.id}")
+            #print(f"Current player: {current_player.id}")
             
             current_player_bet_size = current_player.current_bet.size
             decision = current_player.make_decision(self.hand_state, bet_size=bet_size, number_of_bets=number_of_bets)
-            print(type(decision))
+            #print(type(decision))
             if type(decision) is Fold:
                 self.acted_in_round[current_player_id] = True
                 self.hand_state.add_action("F")

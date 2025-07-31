@@ -5,32 +5,48 @@ from time import time
 from poker.game import Game
 from poker_solver.sequence_generator import SequenceGenerator
 from poker_solver.poker_solver import PokerSolver
+import pickle
+import json
 
-solver = PokerSolver(10)
-print("start_trianing")
-start = time()
-solver.train_solver(1000)
-end = time()
-print(f"Time: {end - start}")
-
-
-for k, v in solver.node_groups.items():
-    if len(k) == 1 and k[-1] == "BC":
-        for i in range(10):
-            print(np.round(v[i].get_average_strategy(), 2), v[i].visited)
+#buckets = 10
+#solver = PokerSolver(buckets)
+with open('poker_solvr_10.pickle', 'rb') as f:
+    solver = pickle.load(f)
 
 
 
+            
+#print("start_trianing")
+#start = time()
+#solver.train_solver(10000)
+#end = time()
+#print(f"Time: {end - start}")
 
-"""result = 0
-for _ in range(1):
-    game = Game(2, 100000, 2)
+#for k, v in solver.node_groups.items():
+#    if len(k) == 1 and k[-1] == "BC":
+#        for i in range(buckets):
+#            print(np.round(v[i].get_average_strategy(), 3), v[i].visited)
+#
+#print("\n")
+#for k, v in solver.node_groups.items():
+#    if len(k) == 4 and k[0] == "BCP" and k[1] == "PBC" and k[2] == "BC" and k[-1] == "P":
+#        for i in range(buckets):
+#            print(np.round(v[i].get_average_strategy(), 3), v[i].visited)
+#
+#with open('poker_solvr_10.pickle', 'wb') as f:
+#    pickle.dump(solver, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+
+result = 0
+for _ in range(500):
+    game = Game(2, 1000, 2, solver)
     winner = game.play_game()
     if winner == 0:
         result += 1
     else:
         result -= 1
-print(f"result: {result}")"""
+print(f"result: {result}")
 """
 end = list()
 sequence_generator = SequenceGenerator()

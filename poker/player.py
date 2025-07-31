@@ -5,16 +5,19 @@ from poker.call import Call
 from poker.fold import Fold
 from poker.check import Check
 from poker.hand_state import HandState
+from poker_solver.poker_solver import PokerSolver
+
 
 
 class Player:
-    def __init__(self, id: int, stack: int):
+    def __init__(self, id: int, stack: int, decision_model: PokerSolver = None):
         self.id = id
         self.cards = None
         self.stack = stack
         self.current_bet = Bet(0)
         self.is_all_in = False
         self.has_folded = False
+        self.decision_model = decision_model
 
     def get_cards(self) -> np.ndarray[Card, 2] | None:
         return self.cards
@@ -63,9 +66,13 @@ class Player:
     def fold(self):
         pass
     
-    def make_decision(self, hand_state: HandState, bet_size:int, number_of_bets:int, decision_model = None) -> Bet | Call | Fold:
+    def make_decision(self, hand_state: HandState, bet_size:int, number_of_bets:int) -> Bet | Call | Fold:
+        #print(f"Public cards: {hand_state.get_public_cards()}")
+        #print(f"bet sequence: {hand_state.get_bet_sequence()}")
+        #print(f"Current bet: {current_bet.size}")
+        #print(f"{hand_state.current_round}")
+        #print(f"{self.cards}")
         current_bet = hand_state.current_bet
-        print(f"Current bet: {current_bet.size}")
         legal_actions = ["fold"]
         if self.is_check_legal(current_bet):
             legal_actions.append("check")
@@ -75,11 +82,31 @@ class Player:
             legal_actions.append("bet")
         chosen_action = " "
         while chosen_action not in ["1", "2", "3"]:
-            print("Choose action:")    
-            for i, action in enumerate(legal_actions, start=1):
-                print(f"{i}. {action}")
+            #print("Choose action:")    
+            #for i, action in enumerate(legal_actions, start=1):
+            #    print(f"{i}. {action}")
             #chosen_action = input("Enter selection: ")
-            action = np.random.choice(legal_actions)
+            #action = np.random.choice(legal_actions)
+            #lookup_table = {
+            #    "fold": "1",
+            #    "check": "2",
+            #    "call": "2",
+            #    "bet": "3"
+            #}
+            #chosen_action = lookup_table[action]
+            if self.decision_model is None:
+                if len(legal_actions) > 2:
+                    action = np.random.choice(legal_actions, p=[0, 0.5, 0.5])
+                else:
+                    action = np.random.choice(legal_actions, p=[0, 1])
+            else:
+                bucket_number = self.find_bucket_number(hand_state.current_round, self.cards, hand_state.get_public_cards())
+                betting_sequence = hand_state.get_bet_sequence()
+                strategy = self.decision_model.node_groups[betting_sequence][bucket_number].get_average_strategy()
+                if len(legal_actions) == 2 and len(strategy) == 3:
+                    strategy[1] += strategy[2]
+                    strategy = strategy[:2]
+                action = np.random.choice(legal_actions, p=strategy)
             lookup_table = {
                 "fold": "1",
                 "check": "2",
@@ -104,7 +131,21 @@ class Player:
                     correct_value = True
             return self.make_a_bet(bet_size)
                 
-             
+    def find_bucket_number(self, round: int, cards: np.ndarray, public_cards: np.ndarray = None) -> int:
+        if round == 0:
+            cards_string = self.decision_model.hand_translator.get_starting_hand_string(cards)
+            cards_strenght = self.decision_model.preflop_strengths[cards_string]
+        elif round == 1:
+            cards_string = self.decision_model.hand_translator.get_flop_string(cards, public_cards[:3])
+            cards_strenght = self.decision_model.flop_strengths[cards_string]
+        elif round == 2:
+            cards_string = self.decision_model.hand_translator.get_turn_string(cards, public_cards[:3], public_cards[3:4])
+            cards_strenght = self.decision_model.turn_strengths[cards_string]
+        else:
+            cards_string = self.decision_model.hand_translator.get_river_string(cards, public_cards[:3], public_cards[3:4], public_cards[4:])
+            cards_strenght = self.decision_model.river_strengths[cards_string]
+        bucket_number = min(int(cards_strenght * self.decision_model.buckets), self.decision_model.buckets - 1)
+        return bucket_number
             
                 
     def is_check_legal(self, bet: Bet) -> bool:

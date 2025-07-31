@@ -4,7 +4,7 @@ from deck.deck import Deck
 import numpy as np
 from poker.hand import Hand
 from phevaluator.evaluator import evaluate_cards
-
+from poker_solver.poker_solver import PokerSolver
 
 class Game:
     def __init__(
@@ -12,11 +12,13 @@ class Game:
         init_number_of_players: int,
         init_stack_size: int,
         big_blind: int,
-        deck: Deck = Deck(),
+        decision_model: PokerSolver = None, 
+        deck: Deck = Deck()
     ):
+        temp = [None, decision_model]
         self.game_state = GameState(
             np.array(
-                [Player(i, init_stack_size) for i in range(init_number_of_players)]
+                [Player(i, init_stack_size, temp[i]) for i in range(init_number_of_players)]
             ),
             current_dealer=0,
         )
@@ -30,7 +32,7 @@ class Game:
         self.deck.reset()
         hand = Hand(self.game_state, self.deck, big_blind)
         hand.deal_cards()
-        print(hand.players)
+        #print(hand.players)
         first_to_act = (
             (self.game_state.current_dealer + 3) % self.game_state.players.size
             if self.game_state.players.size > 2
@@ -43,47 +45,50 @@ class Game:
         winner_id = None
         if hand.active_players - hand.players_all_in == 1:
             if hand.players.size == 3:
-                winner_id = hand.play_betting_round(first_to_act, self.big_blind)
+                winner_id = hand.play_betting_round(first_to_act, self.big_blind, 1)
                 if winner_id is not None:
                     self.finish_game_after_betting(winner_id, hand)
                     return
             elif hand.players[hand.big_blind_player_id].is_all_in and hand.players[hand.big_blind_player_id].current_bet.size > hand.players[hand.small_blind_player_id].current_bet.size:
-                winner_id = hand.play_betting_round(first_to_act, self.big_blind)
+                winner_id = hand.play_betting_round(first_to_act, self.big_blind, 1)
                 if winner_id is not None:
                     self.finish_game_after_betting(winner_id, hand)
                     return
         elif hand.active_players - hand.players_all_in > 1:
-            winner_id = hand.play_betting_round(first_to_act, self.big_blind)
+            winner_id = hand.play_betting_round(first_to_act, self.big_blind, 1)
             if winner_id is not None:
                 self.finish_game_after_betting(winner_id, hand)
                 return
         elif (hand.active_players - hand.players_all_in == 1 and hand.players[hand.big_blind_player_id].is_all_in):
-            winner_id = hand.play_betting_round(first_to_act, self.big_blind)
+            winner_id = hand.play_betting_round(first_to_act, self.big_blind, 1)
             if winner_id is not None:
                 self.finish_game_after_betting(winner_id, hand)
                 return
-        print(hand.hand_state.history[hand.hand_state.current_round])    
+        #print(hand.hand_state.history[hand.hand_state.current_round])
+        #print(hand.hand_state.pot)
         hand.hand_state.public_cards = hand.flop
         hand.hand_state.next_round()
-        print(hand.hand_state.public_cards)
+        #print(hand.hand_state.public_cards)
         if hand.active_players - hand.players_all_in > 1:
             winner_id = hand.play_betting_round(first_to_act_after_flop, self.big_blind)
             if winner_id is not None:
                 self.finish_game_after_betting(winner_id, hand)
                 return
         hand.hand_state.public_cards = np.concatenate((hand.hand_state.public_cards, hand.turn))
-        print(hand.hand_state.history[hand.hand_state.current_round])
+        #print(hand.hand_state.history[hand.hand_state.current_round])
+        #print(hand.hand_state.pot)
         hand.hand_state.next_round()
-        print(hand.hand_state.public_cards)
+        #print(hand.hand_state.public_cards)
         if hand.active_players - hand.players_all_in > 1:
             hand.play_betting_round(first_to_act_after_flop, self.big_blind * 2)
             if winner_id is not None:
                 self.finish_game_after_betting(winner_id, hand)
                 return
         hand.hand_state.public_cards = np.concatenate((hand.hand_state.public_cards, hand.river))
-        print(hand.hand_state.history[hand.hand_state.current_round])
+        #print(hand.hand_state.history[hand.hand_state.current_round])
+        #print(hand.hand_state.pot)
         hand.hand_state.next_round()
-        print(hand.hand_state.public_cards)
+        #print(hand.hand_state.public_cards)
         
         if hand.active_players - hand.players_all_in > 1:
             winner_id = hand.play_betting_round(first_to_act_after_flop, self.big_blind * 2)
@@ -92,7 +97,8 @@ class Game:
             return
         else:
             self.define_winners(hand)
-        print(hand.hand_state.history[hand.hand_state.current_round])
+        #print(hand.hand_state.history[hand.hand_state.current_round])
+        #print(hand.hand_state.pot)
 
     def finish_game_after_betting(self, winner_id: int, hand: Hand) -> None:
         self.game_state.players[winner_id].stack += hand.hand_state.pot
@@ -146,10 +152,10 @@ class Game:
         while self.game_state.players.size > 1:
             rounds += 1
             self.play_hand(self.big_blind)
-            print(self.game_state.players, end="\n\n")
+            #print(self.game_state.players, end="\n\n")
             self.check_for_eliminated_players()
             self.game_state.change_dealer()
-            if sum(x.stack for x in self.game_state.players) > 4000:
-                exit(1)
+            #if sum(x.stack for x in self.game_state.players) > 4000:
+            #    exit(1)
         print(f"Rounds: {rounds}")
         return self.game_state.players[0].id
