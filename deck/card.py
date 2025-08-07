@@ -99,3 +99,6 @@ class Card:
     
     def get_tag(self) -> str:
         return self.tag
+    
+    def get_card_number(self) -> int:
+        return self.card_number
