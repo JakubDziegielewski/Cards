@@ -94,15 +94,25 @@ class Player:
             #    "bet": "3"
             #}
             #chosen_action = lookup_table[action]
-            if self.decision_model is None:
-                if len(legal_actions) > 2:
-                    action = np.random.choice(legal_actions, p=[0, 0.5, 0.5])
-                else:
-                    action = np.random.choice(legal_actions, p=[0, 1])
+            if self.id == 0:
+                bucket_number = self.find_bucket_number(hand_state.current_round, self.cards, hand_state.get_public_cards())
+                betting_sequence = hand_state.get_bet_sequence()
+                strategy = self.decision_model.node_groups[betting_sequence][bucket_number].get_average_strategy()
+                if len(legal_actions) == 2 and len(strategy) == 3:
+                    strategy[1] += strategy[2]
+                    strategy = strategy[:2]
+                index = np.where(strategy == np.max(strategy))
+                action = legal_actions[index[0][0]]
             else:
                 bucket_number = self.find_bucket_number(hand_state.current_round, self.cards, hand_state.get_public_cards())
                 betting_sequence = hand_state.get_bet_sequence()
                 strategy = self.decision_model.node_groups[betting_sequence][bucket_number].get_average_strategy()
+                threshold = 0.15
+                mask = strategy < threshold
+                removed_mass = np.sum(strategy[mask])
+                strategy[mask] = 0
+                max_index = np.argmax(strategy)
+                strategy[max_index] += removed_mass
                 if len(legal_actions) == 2 and len(strategy) == 3:
                     strategy[1] += strategy[2]
                     strategy = strategy[:2]

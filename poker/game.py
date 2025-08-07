@@ -12,10 +12,11 @@ class Game:
         init_number_of_players: int,
         init_stack_size: int,
         big_blind: int,
-        decision_model: PokerSolver = None, 
+        decision_model_zero: PokerSolver = None,
+        decision_model_one: PokerSolver = None,
         deck: Deck = Deck()
     ):
-        temp = [None, decision_model]
+        temp = [decision_model_zero, decision_model_one]
         self.game_state = GameState(
             np.array(
                 [Player(i, init_stack_size, temp[i]) for i in range(init_number_of_players)]
@@ -149,13 +150,13 @@ class Game:
 
     def play_game(self) -> int:
         rounds = 0
-        while self.game_state.players.size > 1:
+        #while self.game_state.players.size > 1:
+        for _ in range(100_000):
             rounds += 1
             self.play_hand(self.big_blind)
             #print(self.game_state.players, end="\n\n")
             self.check_for_eliminated_players()
             self.game_state.change_dealer()
-            #if sum(x.stack for x in self.game_state.players) > 4000:
-            #    exit(1)
         print(f"Rounds: {rounds}")
+        print(self.game_state.players)
         return self.game_state.players[0].id

@@ -73,7 +73,7 @@ class PokerSolver:
         node.visited += 1
         counterfactual_value = 0
         strategy = self.regret_matching(node)
-        if betting_sequence[-1] in ("", "P") or (len(betting_sequence) == 1 and betting_sequence[-1] == "BC"):
+        if betting_sequence[-1] in ("", "P", "BC"):
             actions = ("F", "P", "B")
         elif node.num_actions == 3:
             actions = ("F", "C", "B")
@@ -104,10 +104,12 @@ class PokerSolver:
 
     
     def train_solver(self, iterations: int) -> None:
-        for _ in range(iterations):
+        for i in range(iterations):
             self._deal_cards()
             self.counterfactual_regret_minimization(("B",), True, 1, 1)
             self._return_cards()
+            if ((i + 1) % 10000) == 0:
+                print(i)
     
     def find_bucket_number(self, phase: int, cards: np.ndarray) -> int:
         if phase == 0:
