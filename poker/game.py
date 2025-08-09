@@ -148,15 +148,13 @@ class Game:
                 eliminated_players.append(i)
         self.game_state.players = np.delete(self.game_state.players, eliminated_players)
 
-    def play_game(self) -> int:
-        rounds = 0
+    def play_game(self, iterations = 100_000) -> int:
         #while self.game_state.players.size > 1:
-        for _ in range(100_000):
-            rounds += 1
+        for r in range(iterations):
             self.play_hand(self.big_blind)
             #print(self.game_state.players, end="\n\n")
             self.check_for_eliminated_players()
             self.game_state.change_dealer()
-        print(f"Rounds: {rounds}")
+        print(f"Rounds: {r}")
         print(self.game_state.players)
         return self.game_state.players[0].id

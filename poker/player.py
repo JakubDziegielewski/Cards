@@ -95,19 +95,15 @@ class Player:
             #}
             #chosen_action = lookup_table[action]
             if self.id == 0:
-                bucket_number = self.find_bucket_number(hand_state.current_round, self.cards, hand_state.get_public_cards())
-                betting_sequence = hand_state.get_bet_sequence()
-                strategy = self.decision_model.node_groups[betting_sequence][bucket_number].get_average_strategy()
+                strategy = self.decision_model.get_strategy(hand_state, self.cards)
                 if len(legal_actions) == 2 and len(strategy) == 3:
                     strategy[1] += strategy[2]
                     strategy = strategy[:2]
                 index = np.where(strategy == np.max(strategy))
                 action = legal_actions[index[0][0]]
             else:
-                bucket_number = self.find_bucket_number(hand_state.current_round, self.cards, hand_state.get_public_cards())
-                betting_sequence = hand_state.get_bet_sequence()
-                strategy = self.decision_model.node_groups[betting_sequence][bucket_number].get_average_strategy()
-                threshold = 0.15
+                strategy = self.decision_model.get_strategy(hand_state, self.cards)
+                threshold = 0.08
                 mask = strategy < threshold
                 removed_mass = np.sum(strategy[mask])
                 strategy[mask] = 0
@@ -140,24 +136,7 @@ class Player:
                 if bet_size > current_bet.size:
                     correct_value = True
             return self.make_a_bet(bet_size)
-                
-    def find_bucket_number(self, round: int, cards: np.ndarray, public_cards: np.ndarray = None) -> int:
-        if round == 0:
-            cards_string = self.decision_model.hand_translator.get_starting_hand_string(cards)
-            cards_strenght = self.decision_model.preflop_strengths[cards_string]
-        elif round == 1:
-            cards_string = self.decision_model.hand_translator.get_flop_string(cards, public_cards[:3])
-            cards_strenght = self.decision_model.flop_strengths[cards_string]
-        elif round == 2:
-            cards_string = self.decision_model.hand_translator.get_turn_string(cards, public_cards[:3], public_cards[3:4])
-            cards_strenght = self.decision_model.turn_strengths[cards_string]
-        else:
-            cards_string = self.decision_model.hand_translator.get_river_string(cards, public_cards[:3], public_cards[3:4], public_cards[4:])
-            cards_strenght = self.decision_model.river_strengths[cards_string]
-        bucket_number = min(int(cards_strenght * self.decision_model.buckets), self.decision_model.buckets - 1)
-        return bucket_number
-            
-                
+                    
     def is_check_legal(self, bet: Bet) -> bool:
         return self.current_bet.size == bet.size
 
