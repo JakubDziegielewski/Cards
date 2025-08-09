@@ -1,9 +1,8 @@
 from deck.deck import Deck
-from deck.card import Card, Rank, Suit
+from poker.hand_state import HandState
 import json
 from poker_solver.hand_translator import HandTranslator
 from poker_solver.sequence_generator import SequenceGenerator
-from poker_solver.node import Node
 from poker_solver.node_group import NodeGroup
 import numpy as np
 from phevaluator.evaluator import evaluate_cards
@@ -104,12 +103,10 @@ class PokerSolver:
 
     
     def train_solver(self, iterations: int) -> None:
-        for i in range(iterations):
+        for _ in range(iterations):
             self._deal_cards()
             self.counterfactual_regret_minimization(("B",), True, 1, 1)
             self._return_cards()
-            if ((i + 1) % 10000) == 0:
-                print(i)
     
     def find_bucket_number(self, phase: int, cards: np.ndarray) -> int:
         if phase == 0:
@@ -127,7 +124,21 @@ class PokerSolver:
         bucket_number = min(int(cards_strenght * self.buckets), self.buckets - 1)
         return bucket_number
         
-
+    def find_bucket_number_with_public_cards(self, phase: int, cards: np.ndarray, public_cards: np.ndarray = None):
+        if phase == 0:
+            cards_string = self.hand_translator.get_starting_hand_string(cards)
+            cards_strenght = self.preflop_strengths[cards_string]
+        elif phase == 1:
+            cards_string = self.hand_translator.get_flop_string(cards, public_cards[:3])
+            cards_strenght = self.flop_strengths[cards_string]
+        elif phase == 2:
+            cards_string = self.hand_translator.get_turn_string(cards, public_cards[:3], public_cards[3:4])
+            cards_strenght = self.turn_strengths[cards_string]
+        else:
+            cards_string = self.hand_translator.get_river_string(cards, public_cards[:3], public_cards[3:4], public_cards[4:])
+            cards_strenght = self.river_strengths[cards_string]
+        bucket_number = min(int(cards_strenght * self.buckets), self.buckets - 1)
+        return bucket_number
     
     def regret_matching(self, node) -> np.ndarray:
         positive_regrets = np.where(node.regret_sum > 0)
@@ -138,6 +149,11 @@ class PokerSolver:
         strategy[positive_regrets] += node.regret_sum[positive_regrets] / positive_regrets_sum
         return strategy
         
+    def get_strategy(self, hand_state: HandState, cards: np.ndarray) -> np.ndarray:
+        betting_sequence = hand_state.get_bet_sequence()
+        public_cards = hand_state.get_public_cards()
+        bucket_number = self.find_bucket_number_with_public_cards(hand_state.current_round, cards, public_cards)
+        return self.node_groups[betting_sequence][bucket_number].get_average_strategy()
             
     def _deal_cards(self) -> None:
         self.deck.shuffle()
