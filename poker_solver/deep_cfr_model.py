@@ -1,0 +1,48 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from poker_solver.card_embedding import CardEmbedding
+
+class DeepCFRModel(nn.Module):
+    def __init__(self, ncardtypes, nbets, nactions, dim=64):
+        super(DeepCFRModel, self).__init__()
+        self.card_embeddings = nn.ModuleList(
+            [CardEmbedding(dim) for _ in range(ncardtypes)]
+        )
+        self.card1 = nn.Linear(dim * ncardtypes, dim * ncardtypes)
+        self.card2 = nn.Linear(dim * ncardtypes, dim * ncardtypes)
+        self.card3 = nn.Linear(dim * ncardtypes, dim)
+        
+        self.bet1 = nn.Linear(nbets * 2, dim)
+        self.bet2 = nn.Linear(dim, dim)
+        
+        self.comb1 = nn.Linear(2 * dim, dim)
+        self.comb2 = nn.Linear(dim, dim)
+        self.comb3 = nn.Linear(dim, dim)
+        
+        self.action_head = nn.Linear(dim, nactions)
+        
+    def forward(self, cards, bets):
+        card_embs = []
+        for embedding, card_group in zip(self.card_embeddings, cards):
+            card_embs.append(embedding(card_group))
+        card_embs = torch.cat(card_embs, dim=1)
+        
+        x = F.relu(self.card1(card_embs))
+        x = F.relu(self.card2(x))
+        x = F.relu(self.card3(x))
+        
+        bet_size = bets.clamp(0, 1e6)
+        bet_occured = bets.ge(0)
+        bet_feats = torch.cat([bet_size, bet_occured.float()], dim=1)
+        y = F.relu(self.bet1(bet_feats))
+        y = F.relu(self.bet2(y) + y)
+        
+        z = torch.cat([x, y], dim=1)
+        z = F.relu(self.comb1(z))            
+        z = F.relu(self.comb2(z) + z)            
+        z = F.relu(self.comb3(z) + z) 
+        
+        z = (z - torch.mean(z)) / torch.std(z)
+        return self.action_head(z)
+           

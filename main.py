@@ -5,15 +5,22 @@ from time import time
 from poker.game import Game
 from poker_solver.sequence_generator import SequenceGenerator
 from poker_solver.poker_solver import PokerSolver
+from poker_solver.deep_poker_solver import DeepPokerSolver
+from poker_solver.game_environment import GameEnvironment
 import pickle
 import json
 
-buckets = 10
-
-with open('poker_solvr_10.pickle', 'rb') as f:
+#buckets = 10
+game_environment = GameEnvironment(2)
+game_environment.deal_cards()
+print(game_environment.small_blind_player_cards)
+print(game_environment.big_blind_player_cards)
+deep_solver = DeepPokerSolver(3, 24, 3)
+deep_solver.traverse(game_environment, ("BCBC",), 1)
+"""with open('poker_solver_10_1200000.pickle', 'rb') as f:
     solver = pickle.load(f)
      
-"""with open('poker_solver_10_150_000_iterations.pickle', 'rb') as f:
+with open('poker_solver_10_1000000.pickle', 'rb') as f:
     solver_one = pickle.load(f)"""
       
 """print("start_trianing")
@@ -30,23 +37,23 @@ with open('poker_solvr_10.pickle', 'wb') as f:
 #        for i in range(buckets):
 #            print(np.round(v[i].get_average_strategy(), 3), v[i].visited)
 
-s = 0
+"""s = 0
 print("\n")
 for k, v in solver.node_groups.items():
-    if len(k) == 4 and k[0] == "BCP" and k[1] == "BBC" and k[2] == "BBC" and k[-1] == "P":
+    if len(k) == 4 and k[0] == "BCP" and k[1] == "BBC" and k[2] == "BC" and k[-1] == "":
         for i in range(buckets):
             print(np.round(v[i].get_average_strategy(), 3), v[i].visited)
             s += v[i].visited
 
-print(s)
+print(s)"""
 
-result = 0
+"""result = 0
 for _ in range(1):
-    game = Game(2, 100000, 2, solver, solver)
-    winner = game.play_game()
+    game = Game(2, 100_000, 2, solver, solver)
+    winner = game.play_game(500_000)
     if winner == 0:
         result += 1
-
+"""
 """
 end = list()
 sequence_generator = SequenceGenerator()
