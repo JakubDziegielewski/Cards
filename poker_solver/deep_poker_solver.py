@@ -87,8 +87,8 @@ class DeepPokerSolver:
                 last_sequence = betting_sequence[-1] + action
                 new_sequence = betting_sequence[:-1] + (last_sequence,)
                 next_action_tensors.append(
-                    DeepPokerSolver.betting_sequence_to_tensor(new_sequence)
-                ).to(self.device)
+                    DeepPokerSolver.betting_sequence_to_tensor(new_sequence).to(self.device)
+                )
                 action_counterfactual_values[i] = self.traverse(
                     game_environment, new_sequence, player, iteration
                 )
