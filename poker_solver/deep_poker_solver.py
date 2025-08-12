@@ -27,6 +27,7 @@ class DeepPokerSolver:
         ]
         if torch.cuda.is_available():
             self.device = "cuda"
+            print("HERE")
             for net in self.advantage_nets:
                 net.cuda()
         else:
