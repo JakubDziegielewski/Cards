@@ -38,7 +38,7 @@ class DeepPokerSolver:
             net = self.advantage_nets[player]
             round = len(betting_sequence) - 1
             input_card_tensor = game_environment.card_tensors[player][round]
-            bet_tensor = DeepPokerSolver.betting_sequence_to_tensor(betting_sequence)
+            bet_tensor = DeepPokerSolver.betting_sequence_to_tensor(betting_sequence).to(self.device)
             with torch.no_grad():
                 outputs = net(input_card_tensor, bet_tensor).squeeze(0)
             action_counterfactual_values = torch.zeros(3, device=self.device)
