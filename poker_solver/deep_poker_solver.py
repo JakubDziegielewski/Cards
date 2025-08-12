@@ -41,7 +41,7 @@ class DeepPokerSolver:
             if self.device == "cuda"
             else DeepStrategyModel(
                 ncardtypes=ncardtypes, nbets=nbets, nactions=nactions
-            ).cuda()
+            )
         )
         self.advantage_memories = [
             AdvantageMemory(max_advantage_memory) for _ in range(num_players)
@@ -88,7 +88,7 @@ class DeepPokerSolver:
                 new_sequence = betting_sequence[:-1] + (last_sequence,)
                 next_action_tensors.append(
                     DeepPokerSolver.betting_sequence_to_tensor(new_sequence)
-                )
+                ).to(self.device)
                 action_counterfactual_values[i] = self.traverse(
                     game_environment, new_sequence, player, iteration
                 )
