@@ -52,15 +52,15 @@ class GameEnvironment:
 
         self.card_tensors = [
             [
-                torch.cat((self.cards_numbers_small_blind_player, torch.tensor([-1, -1, -1, -1, -1]))).reshape((1, 7)),
-                torch.cat((self.cards_numbers_small_blind_player, self.cards_numbers_flop, torch.tensor([-1, -1]))).reshape((1, 7)),
-                torch.cat((self.cards_numbers_small_blind_player, self.cards_numbers_flop, self.cards_numbers_turn_and_river[0:1], torch.tensor([-1]))).reshape((1, 7)),
+                torch.cat((self.cards_numbers_small_blind_player, torch.tensor([-1, -1, -1, -1, -1], device=self.device))).reshape((1, 7)),
+                torch.cat((self.cards_numbers_small_blind_player, self.cards_numbers_flop, torch.tensor([-1, -1], device=self.device))).reshape((1, 7)),
+                torch.cat((self.cards_numbers_small_blind_player, self.cards_numbers_flop, self.cards_numbers_turn_and_river[0:1], torch.tensor([-1], device=self.device))).reshape((1, 7)),
                 torch.cat((self.cards_numbers_small_blind_player, self.cards_numbers_flop, self.cards_numbers_turn_and_river)).reshape((1, 7))
             ],
             [
-                torch.cat((self.cards_numbers_big_blind_player, torch.tensor([-1, -1, -1, -1, -1]))).reshape((1, 7)),
-                torch.cat((self.cards_numbers_big_blind_player, self.cards_numbers_flop, torch.tensor([-1, -1]))).reshape((1, 7)),
-                torch.cat((self.cards_numbers_big_blind_player, self.cards_numbers_flop, self.cards_numbers_turn_and_river[0:1], torch.tensor([-1]))).reshape((1, 7)),
+                torch.cat((self.cards_numbers_big_blind_player, torch.tensor([-1, -1, -1, -1, -1], device=self.device))).reshape((1, 7)),
+                torch.cat((self.cards_numbers_big_blind_player, self.cards_numbers_flop, torch.tensor([-1, -1], device=self.device))).reshape((1, 7)),
+                torch.cat((self.cards_numbers_big_blind_player, self.cards_numbers_flop, self.cards_numbers_turn_and_river[0:1], torch.tensor([-1], device=self.device))).reshape((1, 7)),
                 torch.cat((self.cards_numbers_big_blind_player, self.cards_numbers_flop, self.cards_numbers_turn_and_river)).reshape((1, 7))
             ]
         ]
