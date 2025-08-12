@@ -39,8 +39,7 @@ class DeepCFRModel(nn.Module):
         
         bet_size = bets.clamp(0, 1e6)
         bet_occured = bets.ge(0)
-        bet_feats = torch.cat([bet_size, bet_occured.float()], dim=1).to(self.device)
-        print(bet_feats.device)
+        bet_feats = torch.cat([bet_size, bet_occured.float()], dim=1)
         y = F.relu(self.bet1(bet_feats))
         y = F.relu(self.bet2(y) + y)
         
