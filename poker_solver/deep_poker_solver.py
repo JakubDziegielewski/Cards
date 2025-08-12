@@ -82,13 +82,9 @@ class DeepPokerSolver:
                 # action_counterfactual_values[-1] = -float("inf")
             else:
                 strategy = self.regret_matching(outputs)
-            next_action_tensors = []
             for i, action in enumerate(legal_actions):
                 last_sequence = betting_sequence[-1] + action
                 new_sequence = betting_sequence[:-1] + (last_sequence,)
-                next_action_tensors.append(
-                    DeepPokerSolver.betting_sequence_to_tensor(new_sequence).to(self.device)
-                )
                 action_counterfactual_values[i] = self.traverse(
                     game_environment, new_sequence, player, iteration
                 )
@@ -120,7 +116,6 @@ class DeepPokerSolver:
                 strategy = self.regret_matching(outputs)
             self.strategy_memory.add(input_card_tensor, bet_tensor, strategy)
             action = legal_actions[strategy.multinomial(1)]
-            action = legal_actions[1]
             last_sequence = betting_sequence[-1] + action
             new_sequence = betting_sequence[:-1] + (last_sequence,)
             return self.traverse(game_environment, new_sequence, player, iteration)
