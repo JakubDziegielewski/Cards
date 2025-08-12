@@ -37,7 +37,7 @@ class DeepPokerSolver:
             legal_actions = self.define_legal_actions(betting_sequence[-1])
             net = self.advantage_nets[player]
             round = len(betting_sequence) - 1
-            input_card_tensor = game_environment.card_tensors[player][round]
+            input_card_tensor = game_environment.card_tensors[player][round].to(self.device)
             bet_tensor = DeepPokerSolver.betting_sequence_to_tensor(betting_sequence).to(self.device)
             with torch.no_grad():
                 outputs = net(input_card_tensor, bet_tensor).squeeze(0)
@@ -129,7 +129,7 @@ class DeepPokerSolver:
         
     @staticmethod
     @cache
-    def betting_sequence_to_tensor(betting_sequence: tuple) -> torch.tensor:
+    def betting_sequence_to_tensor(betting_sequence: tuple) -> torch.Tensor:
         result_tensor = -torch.ones((4, 6))
         for i, betting_round in enumerate(betting_sequence):
             value = 2 if i < 2 else 4
