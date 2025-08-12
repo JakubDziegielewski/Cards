@@ -4,10 +4,12 @@ from poker_solver.deep_strategy_model import DeepStrategyModel
 from poker_solver.advantage_memory import AdvantageMemory
 from poker_solver.strategy_memory import StrategyMemory
 from poker_solver.game_environment import GameEnvironment
+from poker_solver.card_embedding import CardEmbedding
 import torch
 import torch.nn as nn
 from functools import cache
 from time import time
+
 
 class DeepPokerSolver:
     def __init__(
@@ -16,13 +18,23 @@ class DeepPokerSolver:
         nbets,
         nactions,
         num_players=2,
+        dim=64,
         max_advantage_memory=40_000_000,
         max_strategy_memory=40_000_000,
         batch_size=10_000,
+        traversals: int = 10_000,
+        network_training_iterations: int = 32_000,
     ):
-
+        self.card_embeddings = nn.ModuleList(
+            [CardEmbedding(dim) for _ in range(ncardtypes)]
+        )
         self.advantage_nets = [
-            DeepCFRModel(ncardtypes=ncardtypes, nbets=nbets, nactions=nactions)
+            DeepCFRModel(
+                ncardtypes=ncardtypes,
+                nbets=nbets,
+                nactions=nactions,
+                card_embeddings=self.card_embeddings,
+            )
             for _ in range(num_players)
         ]
         if torch.cuda.is_available():
@@ -31,16 +43,19 @@ class DeepPokerSolver:
                 net.cuda()
         else:
             self.device = "cpu"
-        for advantage_net in self.advantage_nets:
-            nn.init.zeros_(advantage_net.action_head.weight)
-            nn.init.zeros_(advantage_net.action_head.bias)
         self.strategy_net = (
             DeepStrategyModel(
-                ncardtypes=ncardtypes, nbets=nbets, nactions=nactions
+                ncardtypes=ncardtypes,
+                nbets=nbets,
+                nactions=nactions,
+                card_embeddings=self.card_embeddings,
             ).cuda()
             if self.device == "cuda"
             else DeepStrategyModel(
-                ncardtypes=ncardtypes, nbets=nbets, nactions=nactions
+                ncardtypes=ncardtypes,
+                nbets=nbets,
+                nactions=nactions,
+                card_embeddings=self.card_embeddings,
             )
         )
         self.advantage_memories = [
@@ -48,6 +63,8 @@ class DeepPokerSolver:
         ]
         self.strategy_memory = StrategyMemory(max_strategy_memory)
         self.batch_size = batch_size
+        self.traversals = traversals
+        self.network_training_iterations = network_training_iterations
         self.deck = Deck()
 
     def traverse(
@@ -121,36 +138,44 @@ class DeepPokerSolver:
             return self.traverse(game_environment, new_sequence, player, iteration)
 
     def deep_counterfactual_regret_minimization(
-        self, iterations: int, traversals: int = 1000
+        self,
+        iterations: int
     ):
         game_environment = GameEnvironment(2)
         for iteration in range(iterations):
             for player in (0, 1):
                 start = time()
-                for _ in range(traversals):
+                for _ in range(self.traversals):
                     game_environment.deal_cards()
                     self.traverse(game_environment, ("B",), player, iteration)
                     game_environment.return_cards()
                 end = time()
                 print(f"Traversals time: {end - start}")
+            for player in (0, 1):
+                self.advantage_nets[player].reset_weights()
                 start = time()
-                self.train_advantage_net(
-                    player,
-                    torch.optim.Adam(self.advantage_nets[player].parameters(), lr=1e-3),
-                )
+                for _ in range(self.network_training_iterations):
+                    self.train_advantage_net(
+                        player,
+                        torch.optim.Adam(
+                            self.advantage_nets[player].parameters(), lr=1e-4
+                        ),
+                    )
                 end = time()
                 print(f"Advantage network training time: {end - start}")
-        start = time()
-        self.train_strategy_net(
-            torch.optim.Adam(self.strategy_net.parameters(), lr=1e-3)
-        )
-        end = time()
-        print(f"Strategy network training time: {end - start}")
+            start = time()
+            for _ in range(self.network_training_iterations):
+                self.train_strategy_net(
+                    torch.optim.Adam(self.strategy_net.parameters(), lr=1e-4)
+                )
+            end = time()
+            print(f"Strategy network training time: {end - start}")
 
     def train_advantage_net(self, player, optimizer, loss_fn=nn.MSELoss()):
         memory = self.advantage_memories[player]
         net = self.advantage_nets[player]
         if len(memory) < self.batch_size:
+            print(f"Advantage memory len: {len(memory)}")
             return
         batch = memory.sample(self.batch_size)
         cards_tensors, bet_tensors, advantages = zip(*batch)
@@ -176,6 +201,7 @@ class DeepPokerSolver:
         memory = self.strategy_memory
         net = self.strategy_net
         if len(memory) < self.batch_size:
+            print(f"Strategy memory len: {len(memory)}")
             return
         batch = memory.sample(self.batch_size)
         cards_tensors, bet_tensors, strategies = zip(*batch)

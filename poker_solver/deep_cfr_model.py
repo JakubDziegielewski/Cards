@@ -4,11 +4,9 @@ import torch.nn.functional as F
 from poker_solver.card_embedding import CardEmbedding
 
 class DeepCFRModel(nn.Module):
-    def __init__(self, ncardtypes, nbets, nactions, dim=64):
+    def __init__(self, ncardtypes, nbets, nactions, card_embeddings, dim=64):
         super(DeepCFRModel, self).__init__()
-        self.card_embeddings = nn.ModuleList(
-            [CardEmbedding(dim) for _ in range(ncardtypes)]
-        )
+        self.card_embeddings = card_embeddings
         self.card1 = nn.Linear(dim * ncardtypes, dim * ncardtypes)
         self.card2 = nn.Linear(dim * ncardtypes, dim * ncardtypes)
         self.card3 = nn.Linear(dim * ncardtypes, dim)
@@ -21,6 +19,8 @@ class DeepCFRModel(nn.Module):
         self.comb3 = nn.Linear(dim, dim)
         
         self.action_head = nn.Linear(dim, nactions)
+        nn.init.zeros_(self.action_head.weight)
+        nn.init.zeros_(self.action_head.bias)
         
     def forward(self, cards, bets):
         card_groups = [
@@ -50,4 +50,24 @@ class DeepCFRModel(nn.Module):
         
         z = (z - torch.mean(z)) / torch.std(z)
         return self.action_head(z)
-           
+        
+    def reset_weights(self):
+        """
+        Reinitialize all weights in the network.
+        Call like: model.reset_weights()
+        """
+        for m in self.modules():
+            if isinstance(m, nn.Embedding) or m is self.action_head:
+                continue
+            elif hasattr(m, 'reset_parameters'):
+                m.reset_parameters()
+            else:
+                classname = m.__class__.__name__
+                if classname.find('Linear') != -1 or classname.find('Conv') != -1:
+                    if hasattr(m, 'weight') and m.weight is not None:
+                        torch.nn.init.kaiming_uniform_(m.weight, a=0, mode='fan_in', nonlinearity='relu')
+                    if hasattr(m, 'bias') and m.bias is not None:
+                        torch.nn.init.constant_(m.bias, 0)
+        nn.init.zeros_(self.action_head.weight)
+        nn.init.zeros_(self.action_head.bias)        
+        
