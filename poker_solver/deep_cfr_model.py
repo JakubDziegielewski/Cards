@@ -19,7 +19,7 @@ class DeepCFRModel(nn.Module):
         self.comb1 = nn.Linear(2 * dim, dim)
         self.comb2 = nn.Linear(dim, dim)
         self.comb3 = nn.Linear(dim, dim)
-        
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.action_head = nn.Linear(dim, nactions)
         
     def forward(self, cards, bets):
@@ -39,7 +39,7 @@ class DeepCFRModel(nn.Module):
         
         bet_size = bets.clamp(0, 1e6)
         bet_occured = bets.ge(0)
-        bet_feats = torch.cat([bet_size, bet_occured.float()], dim=1)
+        bet_feats = torch.cat([bet_size, bet_occured.float()], dim=1).to(self.device)
         y = F.relu(self.bet1(bet_feats))
         y = F.relu(self.bet2(y) + y)
         
