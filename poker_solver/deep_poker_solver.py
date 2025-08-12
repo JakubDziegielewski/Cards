@@ -7,7 +7,7 @@ from poker_solver.game_environment import GameEnvironment
 import torch
 import torch.nn as nn
 from functools import cache
-
+from time import time
 
 class DeepPokerSolver:
     def __init__(
@@ -27,7 +27,6 @@ class DeepPokerSolver:
         ]
         if torch.cuda.is_available():
             self.device = "cuda"
-            print("HERE")
             for net in self.advantage_nets:
                 net.cuda()
         else:
@@ -122,22 +121,31 @@ class DeepPokerSolver:
             return self.traverse(game_environment, new_sequence, player, iteration)
 
     def deep_counterfactual_regret_minimization(
-        self, iterations: int, traversals: int = 10_000
+        self, iterations: int, traversals: int = 1000
     ):
         game_environment = GameEnvironment(2)
         for iteration in range(iterations):
             for player in (0, 1):
+                start = time()
                 for _ in range(traversals):
                     game_environment.deal_cards()
                     self.traverse(game_environment, ("B",), player, iteration)
                     game_environment.return_cards()
+                end = time()
+                print(f"Traversals time: {end - start}")
+                start = time()
                 self.train_advantage_net(
                     player,
                     torch.optim.Adam(self.advantage_nets[player].parameters(), lr=1e-3),
                 )
+                end = time()
+                print(f"Advantage network training time: {end - start}")
+        start = time()
         self.train_strategy_net(
             torch.optim.Adam(self.strategy_net.parameters(), lr=1e-3)
         )
+        end = time()
+        print(f"Strategy network training time: {end - start}")
 
     def train_advantage_net(self, player, optimizer, loss_fn=nn.MSELoss()):
         memory = self.advantage_memories[player]
