@@ -10,7 +10,7 @@ class CardEmbedding(nn.Module):
         
     def forward(self, input):
         B, num_cards = input.shape
-        x = input.view(-1)
+        x = input.contiguous().view(-1)
         valid = x.ge(0).float()
         x = x.clamp(min=0)
         embs = self.card(x) + self.rank(x // 4) + self.suit(x % 4)

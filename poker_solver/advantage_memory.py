@@ -5,8 +5,8 @@ class AdvantageMemory:
     def __init__(self, capacity):
         self.buffer = deque(maxlen=capacity)
 
-    def add(self, state, action, advantage):
-        self.buffer.append((state, action, advantage))
+    def add(self, card_tensor, bet_tensor, advantage):
+        self.buffer.append((card_tensor, bet_tensor, advantage))
 
     def sample(self, batch_size):
         return sample(self.buffer, min(len(self.buffer), batch_size))

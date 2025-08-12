@@ -23,8 +23,13 @@ class DeepCFRModel(nn.Module):
         self.action_head = nn.Linear(dim, nactions)
         
     def forward(self, cards, bets):
+        card_groups = [
+            cards[:, 0:2],
+            cards[:, 2:5],
+            cards[:, 5:7]
+        ]
         card_embs = []
-        for embedding, card_group in zip(self.card_embeddings, cards):
+        for embedding, card_group in zip(self.card_embeddings, card_groups):
             card_embs.append(embedding(card_group))
         card_embs = torch.cat(card_embs, dim=1)
         

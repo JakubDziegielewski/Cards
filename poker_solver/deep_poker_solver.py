@@ -1,6 +1,6 @@
 from deck.deck import Deck
-from poker_solver.card_embedding import CardEmbedding
 from poker_solver.deep_cfr_model import DeepCFRModel
+from poker_solver.deep_strategy_model import DeepStrategyModel
 from poker_solver.advantage_memory import AdvantageMemory
 from poker_solver.strategy_memory import StrategyMemory
 from poker_solver.game_environment import GameEnvironment
@@ -10,7 +10,7 @@ from functools import cache
 
 
 class DeepPokerSolver:
-    def __init__(self, ncardtypes, nbets, nactions, num_players=2, max_advantage_memory = 40_000_000, max_strategy_memory = 40_000_000, batch_size = 4_000):
+    def __init__(self, ncardtypes, nbets, nactions, num_players=2, max_advantage_memory = 40_000_000, max_strategy_memory = 40_000_000, batch_size = 10_000):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.advantage_nets = [
             DeepCFRModel(ncardtypes=ncardtypes, nbets=nbets, nactions=nactions).to(
@@ -21,33 +21,112 @@ class DeepPokerSolver:
         for advantage_net in self.advantage_nets:
             nn.init.zeros_(advantage_net.action_head.weight)
             nn.init.zeros_(advantage_net.action_head.bias)
-        self.strategy_net = DeepCFRModel(ncardtypes=ncardtypes, nbets=nbets, nactions=nactions).to(self.device)
+        self.strategy_net = DeepStrategyModel(ncardtypes=ncardtypes, nbets=nbets, nactions=nactions).to(self.device)
         self.advantage_memories = [AdvantageMemory(max_advantage_memory) for _ in range(num_players)]
         self.strategy_memory = StrategyMemory(max_strategy_memory)
         self.batch_size = batch_size
         self.deck = Deck()
     
-    def traverse(self, game_environment: GameEnvironment, betting_sequence:tuple, player:int):
+    def traverse(self, game_environment: GameEnvironment, betting_sequence:tuple, player:int, iteration: int):
         if DeepPokerSolver.betting_sequence_ends_hand(betting_sequence):
             return DeepPokerSolver.find_result(game_environment, betting_sequence)
         elif DeepPokerSolver.betting_sequence_ends_round(betting_sequence):
              betting_sequence = betting_sequence + ("",)
-             return self.traverse(game_environment, betting_sequence, player)
+             return self.traverse(game_environment, betting_sequence, player, iteration)
         elif len(betting_sequence[-1]) % 2 != player:
             legal_actions = self.define_legal_actions(betting_sequence[-1])
             net = self.advantage_nets[player]
             round = len(betting_sequence) - 1
             input_card_tensor = game_environment.card_tensors[player][round]
-            print(legal_actions)
-            print(input_card_tensor)
             bet_tensor = DeepPokerSolver.betting_sequence_to_tensor(betting_sequence)
-            print(bet_tensor)
             with torch.no_grad():
-                outputs = net(input_card_tensor, DeepPokerSolver.betting_sequence_to_tensor(betting_sequence))
-            print(outputs)
+                outputs = net(input_card_tensor, bet_tensor).squeeze(0)
+            action_counterfactual_values = torch.zeros(3, device=self.device)
+            if len(legal_actions) == 2:
+                strategy = torch.zeros(3, device=self.device)
+                strategy[:-1] = self.regret_matching(outputs[:-1])
+                action_counterfactual_values[-1] = -4_294_967_296
+                #action_counterfactual_values[-1] = -float("inf")
+            else:
+                strategy = self.regret_matching(outputs)
+            next_action_tensors = []
+            for i, action in enumerate(legal_actions):
+                last_sequence = betting_sequence[-1] + action
+                new_sequence = betting_sequence[:-1] + (last_sequence,)
+                next_action_tensors.append(DeepPokerSolver.betting_sequence_to_tensor(new_sequence))
+                action_counterfactual_values[i] = self.traverse(game_environment, new_sequence, player, iteration)
+            node_value = (strategy * action_counterfactual_values).sum()
+            sampled_advantages = action_counterfactual_values - node_value
+            if player == 1: #minimizing player
+                sampled_advantages = -sampled_advantages
+            self.advantage_memories[player].add(input_card_tensor, bet_tensor, sampled_advantages)
+            return node_value
+        else:
+            current_player = 1 - player
+            legal_actions = self.define_legal_actions(betting_sequence[-1])
+            net = self.advantage_nets[current_player]
+            round = len(betting_sequence) - 1
+            input_card_tensor = game_environment.card_tensors[current_player][round]
+            bet_tensor = DeepPokerSolver.betting_sequence_to_tensor(betting_sequence)
             with torch.no_grad():
-                pass
+                outputs = net(input_card_tensor, bet_tensor).squeeze(0)
+            if len(legal_actions) == 2:
+                strategy = torch.zeros(3, device=self.device)
+                strategy[:-1] = self.regret_matching(outputs[:-1])
+            else:
+                strategy = self.regret_matching(outputs)
+            self.strategy_memory.add(input_card_tensor, bet_tensor, strategy)
+            action = legal_actions[strategy.multinomial(1)]
+            action = legal_actions[1]
+            last_sequence = betting_sequence[-1] + action
+            new_sequence = betting_sequence[:-1] + (last_sequence,)
+            return self.traverse(game_environment, new_sequence, player, iteration)
     
+    def deep_counterfactual_regret_minimization(self, iterations: int, traversals: int = 10_000):
+        game_environment = GameEnvironment(2)
+        for iteration in range(iterations):
+            for player in (0, 1):
+                for _ in range(traversals):
+                    game_environment.deal_cards()
+                    self.traverse(game_environment, ("B",), player, iteration)
+                    game_environment.return_cards()
+                self.train_advantage_net(player, torch.optim.Adam(self.advantage_nets[player].parameters(), lr=1e-3))
+        self.train_strategy_net(torch.optim.Adam(self.strategy_net.parameters(), lr=1e-3))
+                
+    
+    def train_advantage_net(self, player, optimizer, loss_fn=nn.MSELoss()):
+        memory = self.advantage_memories[player]
+        net = self.advantage_nets[player]
+        if len(memory) < self.batch_size:
+            return
+        batch = memory.sample(self.batch_size)
+        cards_tensors, bet_tensors, advantages = zip(*batch)
+        
+        cards_tensors = torch.stack(cards_tensors).reshape(self.batch_size, -1)
+        bet_tensors = torch.stack(bet_tensors).reshape((self.batch_size, -1))
+        advantages = torch.stack(advantages).reshape((self.batch_size, -1))
+        preds = net(cards_tensors, bet_tensors)
+        loss = loss_fn(preds, advantages)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+    
+    def train_strategy_net(self, optimizer, loss_fn=nn.KLDivLoss(reduction='batchmean')):
+        memory = self.strategy_memory
+        net = self.strategy_net
+        if len(memory) < self.batch_size:
+            return
+        batch = memory.sample(self.batch_size)
+        cards_tensors, bet_tensors, strategies = zip(*batch)
+        cards_tensors = torch.stack(cards_tensors).reshape(self.batch_size, -1)
+        bet_tensors = torch.stack(bet_tensors).reshape((self.batch_size, -1))
+        strategies = torch.stack(strategies).reshape((self.batch_size, -1))
+        preds = net(cards_tensors, bet_tensors)
+        loss = loss_fn(preds, strategies)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        
     @staticmethod
     @cache
     def betting_sequence_to_tensor(betting_sequence: tuple) -> torch.tensor:
@@ -62,24 +141,26 @@ class DeepPokerSolver:
     def betting_round_to_ints(betting_round: str, value: int) -> list:
         result_list = [-1] * 6
         for i, action in enumerate(betting_round):
+            if i > 5:
+                pass
             result_list[i] = value if action == "B" else 0
         return torch.tensor(result_list)
     
     
-    def define_legal_actions(self, betting_sequence: str) -> tuple:
-        if betting_sequence in ("", "P", "BC"):
+    def define_legal_actions(self, betting_round: str) -> tuple:
+        if betting_round in ("", "P", "BC"):
             return ("F", "P", "B")
-        elif betting_sequence[-1].count("B") < 4:
+        elif betting_round.count("B") < 4:
             return ("F", "C", "B")
         else:
             return ("F", "C")
-        
+    
     def regret_matching(self, regrets) -> torch.Tensor:
         positive_regrets = torch.where(regrets > 0)
         if len(positive_regrets[0]) == 0:
-            return torch.ones(regrets.shape) / regrets.shape
+            return torch.ones(regrets.shape, device=self.device, dtype=torch.float) / regrets.shape[0]
         positive_regrets_sum = torch.sum(regrets[positive_regrets])
-        strategy = torch.zeros(regrets.shape)
+        strategy = torch.zeros(regrets.shape, device=self.device, dtype=torch.float)
         strategy[positive_regrets] += regrets[positive_regrets] / positive_regrets_sum
         return strategy
     

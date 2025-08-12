@@ -8,6 +8,7 @@ class GameEnvironment:
     def __init__(self, players_number=2):
         self.deck = Deck()
         self.players_number = players_number
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
     def deal_cards(self) -> None:
         self.deck.shuffle()
@@ -33,80 +34,40 @@ class GameEnvironment:
             ]
         )
 
-        self.cards_numbers_small_blind_player = [
-            card.get_card_number() for card in self.small_blind_player_cards
-        ]
-        self.cards_numbers_big_blind_player = [
-            card.get_card_number() for card in self.big_blind_player_cards
-        ]
-        self.cards_numbers_flop = [card.get_card_number() for card in self.flop]
-        self.cards_numbers_turn_and_river = [
+        self.cards_numbers_small_blind_player = torch.tensor(
+            [card.get_card_number() for card in self.small_blind_player_cards],
+            device=self.device,
+        )
+        self.cards_numbers_big_blind_player = torch.tensor(
+            [card.get_card_number() for card in self.big_blind_player_cards],
+            device=self.device,
+        )
+        self.cards_numbers_flop = torch.tensor(
+            [card.get_card_number() for card in self.flop], device=self.device
+        )
+        self.cards_numbers_turn_and_river = torch.tensor([
             self.turn[0].get_card_number(),
             self.river[0].get_card_number(),
-        ]
-
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        ], device=self.device)
 
         self.card_tensors = [
             [
-                InputTensors(device, self.cards_numbers_small_blind_player).tensors,
-                InputTensors(
-                    device,
-                    self.cards_numbers_small_blind_player,
-                    self.cards_numbers_flop,
-                ).tensors,
-                InputTensors(
-                    device,
-                    self.cards_numbers_small_blind_player,
-                    self.cards_numbers_flop,
-                    self.cards_numbers_turn_and_river[0],
-                ).tensors,
-                InputTensors(
-                    device,
-                    self.cards_numbers_small_blind_player,
-                    self.cards_numbers_flop,
-                    self.cards_numbers_turn_and_river[0],
-                    self.cards_numbers_turn_and_river[1],
-                ).tensors,
+                torch.cat((self.cards_numbers_small_blind_player, torch.tensor([-1, -1, -1, -1, -1]))).reshape((1, 7)),
+                torch.cat((self.cards_numbers_small_blind_player, self.cards_numbers_flop, torch.tensor([-1, -1]))).reshape((1, 7)),
+                torch.cat((self.cards_numbers_small_blind_player, self.cards_numbers_flop, self.cards_numbers_turn_and_river[0:1], torch.tensor([-1]))).reshape((1, 7)),
+                torch.cat((self.cards_numbers_small_blind_player, self.cards_numbers_flop, self.cards_numbers_turn_and_river)).reshape((1, 7))
             ],
             [
-                InputTensors(device, self.cards_numbers_big_blind_player).tensors,
-                InputTensors(
-                    device, self.cards_numbers_big_blind_player, self.cards_numbers_flop
-                ).tensors,
-                InputTensors(
-                    device,
-                    self.cards_numbers_big_blind_player,
-                    self.cards_numbers_flop,
-                    self.cards_numbers_turn_and_river[0],
-                ).tensors,
-                InputTensors(
-                    device,
-                    self.cards_numbers_big_blind_player,
-                    self.cards_numbers_flop,
-                    self.cards_numbers_turn_and_river[0],
-                    self.cards_numbers_turn_and_river[1],
-                ).tensors,
-            ],
+                torch.cat((self.cards_numbers_big_blind_player, torch.tensor([-1, -1, -1, -1, -1]))).reshape((1, 7)),
+                torch.cat((self.cards_numbers_big_blind_player, self.cards_numbers_flop, torch.tensor([-1, -1]))).reshape((1, 7)),
+                torch.cat((self.cards_numbers_big_blind_player, self.cards_numbers_flop, self.cards_numbers_turn_and_river[0:1], torch.tensor([-1]))).reshape((1, 7)),
+                torch.cat((self.cards_numbers_big_blind_player, self.cards_numbers_flop, self.cards_numbers_turn_and_river)).reshape((1, 7))
+            ]
         ]
 
-    def return_card(self) -> None:
+    def return_cards(self) -> None:
         self.deck.return_cards(self.small_blind_player_cards)
         self.deck.return_cards(self.big_blind_player_cards)
         self.deck.return_cards(self.flop)
         self.deck.return_cards(self.turn)
         self.deck.return_cards(self.river)
-
-
-class InputTensors:
-    def __init__(
-        self, device: str, player_cards: list, flop=[-1, -1, -1], turn=-1, river=-1
-    ):
-        self.tensors = [
-            torch.tensor([player_cards], device=device),
-            torch.tensor([flop], device=device),
-            torch.tensor([[turn, river]], device=device),
-        ]
-
-    def __repr__(self):
-        return str(self.tensors)
