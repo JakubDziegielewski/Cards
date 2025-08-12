@@ -102,9 +102,9 @@ class DeepPokerSolver:
         batch = memory.sample(self.batch_size)
         cards_tensors, bet_tensors, advantages = zip(*batch)
         
-        cards_tensors = torch.stack(cards_tensors).reshape(self.batch_size, -1)
-        bet_tensors = torch.stack(bet_tensors).reshape((self.batch_size, -1))
-        advantages = torch.stack(advantages).reshape((self.batch_size, -1))
+        cards_tensors = torch.stack(cards_tensors).reshape(self.batch_size, -1).to(self.device)
+        bet_tensors = torch.stack(bet_tensors).reshape((self.batch_size, -1)).to(self.device)
+        advantages = torch.stack(advantages).reshape((self.batch_size, -1)).to(self.device)
         preds = net(cards_tensors, bet_tensors)
         loss = loss_fn(preds, advantages)
         optimizer.zero_grad()
