@@ -9,18 +9,18 @@ class DeepCFRModel(nn.Module):
         self.card_embeddings = nn.ModuleList(
             [CardEmbedding(dim) for _ in range(ncardtypes)]
         )
-        self.card1 = nn.Linear(dim * ncardtypes, dim * ncardtypes)
-        self.card2 = nn.Linear(dim * ncardtypes, dim * ncardtypes)
-        self.card3 = nn.Linear(dim * ncardtypes, dim)
-        
-        self.bet1 = nn.Linear(nbets * 2, dim)
-        self.bet2 = nn.Linear(dim, dim)
-        
-        self.comb1 = nn.Linear(2 * dim, dim)
-        self.comb2 = nn.Linear(dim, dim)
-        self.comb3 = nn.Linear(dim, dim)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.action_head = nn.Linear(dim, nactions)
+        self.card1 = nn.Linear(dim * ncardtypes, dim * ncardtypes, device=self.device)
+        self.card2 = nn.Linear(dim * ncardtypes, dim * ncardtypes, device=self.device)
+        self.card3 = nn.Linear(dim * ncardtypes, dim, device=self.device)
+        
+        self.bet1 = nn.Linear(nbets * 2, dim, device=self.device)
+        self.bet2 = nn.Linear(dim, dim, device=self.device)
+        
+        self.comb1 = nn.Linear(2 * dim, dim, device=self.device)
+        self.comb2 = nn.Linear(dim, dim, device=self.device)
+        self.comb3 = nn.Linear(dim, dim, device=self.device)
+        self.action_head = nn.Linear(dim, nactions, device=self.device)
         
     def forward(self, cards, bets):
         card_groups = [
