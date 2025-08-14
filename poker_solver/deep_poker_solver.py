@@ -75,12 +75,13 @@ class DeepPokerSolver:
         betting_sequence: tuple,
         player: int,
         iteration: int,
+        weight: float
     ):
         if DeepPokerSolver.betting_sequence_ends_hand(betting_sequence):
             return DeepPokerSolver.find_result(game_environment, betting_sequence)
         elif DeepPokerSolver.betting_sequence_ends_round(betting_sequence):
             betting_sequence = betting_sequence + ("",)
-            return self.traverse(game_environment, betting_sequence, player, iteration)
+            return self.traverse(game_environment, betting_sequence, player, iteration, weight)
         elif len(betting_sequence[-1]) % 2 != player: #player 0 is small blind, player 1 is big blind
             legal_actions = self.define_legal_actions(betting_sequence[-1])
             net = self.advantage_nets[player]
@@ -105,10 +106,10 @@ class DeepPokerSolver:
                 last_sequence = betting_sequence[-1] + action
                 new_sequence = betting_sequence[:-1] + (last_sequence,)
                 action_counterfactual_values[i] = self.traverse(
-                    game_environment, new_sequence, player, iteration
+                    game_environment, new_sequence, player, iteration, weight * strategy[i].item()
                 )
             node_value = (strategy * action_counterfactual_values).sum()
-            sampled_advantages = action_counterfactual_values - node_value
+            sampled_advantages = (action_counterfactual_values - node_value) * weight
             if player == 1:  # minimizing player
                 sampled_advantages = -sampled_advantages
             self.advantage_memories[player].add(
@@ -134,10 +135,11 @@ class DeepPokerSolver:
             else:
                 strategy = self.regret_matching(outputs)
             self.strategy_memory.add(input_card_tensor, bet_tensor, strategy)
-            action = legal_actions[strategy.multinomial(1)]
+            index = strategy.multinomial(1)
+            action = legal_actions[index]
             last_sequence = betting_sequence[-1] + action
             new_sequence = betting_sequence[:-1] + (last_sequence,)
-            return self.traverse(game_environment, new_sequence, player, iteration)
+            return self.traverse(game_environment, new_sequence, player, iteration, weight * strategy[index].item())
 
     def deep_counterfactual_regret_minimization(
         self,
@@ -149,7 +151,7 @@ class DeepPokerSolver:
                 start = time()
                 for _ in range(self.traversals):
                     game_environment.deal_cards()
-                    self.traverse(game_environment, ("B",), player, iteration)
+                    self.traverse(game_environment, ("B",), player, iteration, 1.0)
                     game_environment.return_cards()
                 end = time()
                 print(f"Traversals time: {end - start}")
