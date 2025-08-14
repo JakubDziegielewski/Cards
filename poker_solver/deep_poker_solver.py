@@ -7,6 +7,8 @@ from poker_solver.game_environment import GameEnvironment
 from poker_solver.card_embedding import CardEmbedding
 import torch
 import torch.nn as nn
+import numpy as np
+from poker.hand_state import HandState
 from functools import cache
 from time import time
 
@@ -79,7 +81,7 @@ class DeepPokerSolver:
         elif DeepPokerSolver.betting_sequence_ends_round(betting_sequence):
             betting_sequence = betting_sequence + ("",)
             return self.traverse(game_environment, betting_sequence, player, iteration)
-        elif len(betting_sequence[-1]) % 2 != player:
+        elif len(betting_sequence[-1]) % 2 != player: #player 0 is small blind, player 1 is big blind
             legal_actions = self.define_legal_actions(betting_sequence[-1])
             net = self.advantage_nets[player]
             round = len(betting_sequence) - 1
@@ -177,18 +179,7 @@ class DeepPokerSolver:
         if len(memory) < self.batch_size:
             print(f"Advantage memory len: {len(memory)}")
             return
-        batch = memory.sample(self.batch_size)
-        cards_tensors, bet_tensors, advantages = zip(*batch)
-
-        cards_tensors = (
-            torch.stack(cards_tensors).reshape(self.batch_size, -1).to(self.device)
-        )
-        bet_tensors = (
-            torch.stack(bet_tensors).reshape((self.batch_size, -1)).to(self.device)
-        )
-        advantages = (
-            torch.stack(advantages).reshape((self.batch_size, -1)).to(self.device)
-        )
+        cards_tensors, bet_tensors, advantages = memory.sample(self.batch_size)
         preds = net(cards_tensors, bet_tensors)
         loss = loss_fn(preds, advantages)
         optimizer.zero_grad()
@@ -203,16 +194,25 @@ class DeepPokerSolver:
         if len(memory) < self.batch_size:
             print(f"Strategy memory len: {len(memory)}")
             return
-        batch = memory.sample(self.batch_size)
-        cards_tensors, bet_tensors, strategies = zip(*batch)
-        cards_tensors = torch.stack(cards_tensors).reshape(self.batch_size, -1)
-        bet_tensors = torch.stack(bet_tensors).reshape((self.batch_size, -1))
-        strategies = torch.stack(strategies).reshape((self.batch_size, -1))
+        cards_tensors, bet_tensors, strategies = memory.sample(self.batch_size)
         preds = net(cards_tensors, bet_tensors)
         loss = loss_fn(preds, strategies)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+    
+    def get_strategy(self, hand_state: HandState, cards: np.ndarray) -> np.ndarray:
+        betting_sequence = hand_state.get_bet_sequence()
+        cards_tensor = -torch.ones((1, 7), device=self.device, dtype=torch.long)
+        cards_tensor[0][:2] = torch.tensor([card.get_card_number() for card in cards], device=self.device)
+        public_cards = hand_state.get_public_cards()
+        if public_cards is not None:
+            cards_tensor[0][2:2+len(public_cards)] = torch.tensor([card.get_card_number() for card in public_cards])
+        betting_sequence_tensor = DeepPokerSolver.betting_sequence_to_tensor(betting_sequence)
+        with torch.no_grad():
+            strategy = self.strategy_net(cards_tensor, betting_sequence_tensor)
+        return strategy.numpy().reshape(3)
+        
 
     @staticmethod
     @cache
