@@ -9,7 +9,7 @@ class StrategyMemory:
         # Preallocate storage
         self.cards = torch.zeros((capacity, num_cards), dtype=torch.int64, device=self.device)
         self.bets = torch.zeros((capacity, num_bets), dtype=torch.int64, device=self.device)
-        self.strategies = torch.zeros((capacity, num_actions), dtype=torch.float32, device=self.device)
+        self.strategies = torch.zeros((capacity, num_actions), dtype=torch.float64, device=self.device)
         self.index = 0
         self.full = False
 

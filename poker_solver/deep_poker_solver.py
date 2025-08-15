@@ -92,13 +92,15 @@ class DeepPokerSolver:
             bet_tensor = DeepPokerSolver.betting_sequence_to_tensor(
                 betting_sequence
             ).to(self.device)
+            if torch.isnan(input_card_tensor).any() or torch.isnan(bet_tensor).any():
+                print("NaNs in input!")
             with torch.no_grad():
                 outputs = net(input_card_tensor, bet_tensor).squeeze(0)
             action_counterfactual_values = torch.zeros(3, device=self.device)
             if len(legal_actions) == 2:
                 strategy = torch.zeros(3, device=self.device)
                 strategy[:-1] = self.regret_matching(outputs[:-1])
-                action_counterfactual_values[-1] = -4_294_967_296
+                action_counterfactual_values[-1] = -1e6
                 # action_counterfactual_values[-1] = -float("inf")
             else:
                 strategy = self.regret_matching(outputs)
@@ -112,6 +114,7 @@ class DeepPokerSolver:
             sampled_advantages = (action_counterfactual_values - node_value) * weight
             if player == 1:  # minimizing player
                 sampled_advantages = -sampled_advantages
+            sampled_advantages = torch.clamp(sampled_advantages, min=-1e6, max=1e6)
             self.advantage_memories[player].add(
                 input_card_tensor, bet_tensor, sampled_advantages
             )
@@ -248,12 +251,13 @@ class DeepPokerSolver:
 
     def regret_matching(self, regrets) -> torch.Tensor:
         positive_regrets = torch.where(regrets > 0)
-        if len(positive_regrets[0]) == 0:
+        positive_regrets_sum = torch.sum(regrets[positive_regrets])
+        if positive_regrets_sum < 1e-8:
             return (
                 torch.ones(regrets.shape, device=self.device, dtype=torch.float)
                 / regrets.shape[0]
             )
-        positive_regrets_sum = torch.sum(regrets[positive_regrets])
+        
         strategy = torch.zeros(regrets.shape, device=self.device, dtype=torch.float)
         strategy[positive_regrets] += regrets[positive_regrets] / positive_regrets_sum
         return strategy
