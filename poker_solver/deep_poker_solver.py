@@ -67,7 +67,7 @@ class DeepPokerSolver:
         self.batch_size = batch_size
         self.traversals = traversals
         self.network_training_iterations = network_training_iterations
-        self.deck = Deck()
+        self.performed_iterations = 0
 
     def traverse(
         self,
@@ -147,6 +147,7 @@ class DeepPokerSolver:
     ):
         game_environment = GameEnvironment(2)
         for iteration in range(iterations):
+            self.performed_iterations += 1
             for player in (0, 1):
                 start = time()
                 for _ in range(self.traversals):
