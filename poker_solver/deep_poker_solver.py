@@ -254,11 +254,11 @@ class DeepPokerSolver:
         positive_regrets_sum = torch.sum(regrets[positive_regrets])
         if positive_regrets_sum < 1e-8:
             return (
-                torch.ones(regrets.shape, device=self.device, dtype=torch.float64)
+                torch.ones(regrets.shape, device=self.device, dtype=torch.float32)
                 / regrets.shape[0]
             )
         
-        strategy = torch.zeros(regrets.shape, device=self.device, dtype=torch.float64)
+        strategy = torch.zeros(regrets.shape, device=self.device, dtype=torch.float32)
         strategy[positive_regrets] += regrets[positive_regrets] / positive_regrets_sum
         return strategy
 
