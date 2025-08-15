@@ -190,7 +190,7 @@ class DeepPokerSolver:
         optimizer.step()
 
     def train_strategy_net(
-        self, optimizer, loss_fn=nn.KLDivLoss(reduction="batchmean")
+        self, optimizer, loss_fn=nn.MSELoss()
     ):
         memory = self.strategy_memory
         net = self.strategy_net
