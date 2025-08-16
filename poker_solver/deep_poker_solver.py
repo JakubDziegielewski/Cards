@@ -84,6 +84,7 @@ class DeepPokerSolver:
             return self.traverse(game_environment, betting_sequence, player, iteration, weight)
         elif len(betting_sequence[-1]) % 2 != player: #player 0 is small blind, player 1 is big blind
             legal_actions = self.define_legal_actions(betting_sequence[-1])
+            legal_actions_number = len(legal_actions)
             net = self.advantage_nets[player]
             round = len(betting_sequence) - 1
             input_card_tensor = game_environment.card_tensors[player][round].to(
@@ -100,7 +101,7 @@ class DeepPokerSolver:
             if len(legal_actions) == 2:
                 strategy = torch.zeros(3, device=self.device)
                 strategy[:-1] = self.regret_matching(outputs[:-1])
-                action_counterfactual_values[-1] = -1e6
+                action_counterfactual_values[-1] = float("nan")
                 # action_counterfactual_values[-1] = -float("inf")
             else:
                 strategy = self.regret_matching(outputs)
@@ -110,7 +111,10 @@ class DeepPokerSolver:
                 action_counterfactual_values[i] = self.traverse(
                     game_environment, new_sequence, player, iteration, weight * strategy[i].item()
                 )
-            node_value = (strategy * action_counterfactual_values).sum()
+            if legal_actions_number == 2:
+                node_value = (strategy[:-1] * action_counterfactual_values[:-1]).sum().item()
+            else:
+                node_value = (strategy * action_counterfactual_values).sum().item()
             sampled_advantages = (action_counterfactual_values - node_value) * weight
             if player == 1:  # minimizing player
                 sampled_advantages = -sampled_advantages
@@ -122,6 +126,7 @@ class DeepPokerSolver:
         else:
             current_player = 1 - player
             legal_actions = self.define_legal_actions(betting_sequence[-1])
+            legal_actions_number = len(legal_actions)
             net = self.advantage_nets[current_player]
             round = len(betting_sequence) - 1
             input_card_tensor = game_environment.card_tensors[current_player][round].to(
@@ -132,13 +137,14 @@ class DeepPokerSolver:
             ).to(self.device)
             with torch.no_grad():
                 outputs = net(input_card_tensor, bet_tensor).squeeze(0)
-            if len(legal_actions) == 2:
+            if legal_actions_number == 2:
                 strategy = torch.zeros(3, device=self.device)
                 strategy[:-1] = self.regret_matching(outputs[:-1])
+                strategy[-1] = float("nan")
             else:
                 strategy = self.regret_matching(outputs)
             self.strategy_memory.add(input_card_tensor, bet_tensor, strategy)
-            index = strategy.multinomial(1)
+            index = strategy[:legal_actions_number].multinomial(1)
             action = legal_actions[index]
             last_sequence = betting_sequence[-1] + action
             new_sequence = betting_sequence[:-1] + (last_sequence,)
@@ -179,21 +185,23 @@ class DeepPokerSolver:
             end = time()
             print(f"Strategy network training time: {end - start}")
 
-    def train_advantage_net(self, player, optimizer, loss_fn=nn.MSELoss()):
+    def train_advantage_net(self, player, optimizer):
         memory = self.advantage_memories[player]
         net = self.advantage_nets[player]
         if len(memory) < self.batch_size:
             print(f"Advantage memory len: {len(memory)}")
             return
         cards_tensors, bet_tensors, advantages = memory.sample(self.batch_size)
+        masks = (~torch.isnan(advantages)).float()
+        advantages[torch.isnan(advantages)] = 0.0
         preds = net(cards_tensors, bet_tensors)
-        loss = loss_fn(preds, advantages)
+        loss = ((preds - advantages) ** 2 * masks).sum() / masks.sum()
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
     def train_strategy_net(
-        self, optimizer, loss_fn=nn.MSELoss()
+        self, optimizer
     ):
         memory = self.strategy_memory
         net = self.strategy_net
@@ -201,8 +209,10 @@ class DeepPokerSolver:
             print(f"Strategy memory len: {len(memory)}")
             return
         cards_tensors, bet_tensors, strategies = memory.sample(self.batch_size)
+        masks = (~torch.isnan(strategies)).float()
+        strategies[torch.isnan(strategies)] = 0.0  # fill NaNs so loss computation works
         preds = net(cards_tensors, bet_tensors)
-        loss = loss_fn(preds, strategies)
+        loss = ((preds - strategies) ** 2 * masks).sum() / masks.sum()
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
