@@ -64,10 +64,6 @@ class DeepPokerSolver:
             AdvantageMemory(max_advantage_memory) for _ in range(num_players)
         ]
         self.strategy_memory = StrategyMemory(max_strategy_memory)
-        self.advantage_optimizers = [
-            torch.optim.Adam(self.advantage_nets[0].parameters(), lr=1e-4),
-            torch.optim.Adam(self.advantage_nets[1].parameters(), lr=1e-4),
-        ]
         self.strategy_optimizer = torch.optim.Adam(
             self.strategy_net.parameters(), lr=1e-4
         )
@@ -133,7 +129,7 @@ class DeepPokerSolver:
                 ) * weight
             else:  # minimizing player
                 sampled_advantages = (
-                    -(action_counterfactual_values + node_value) * weight
+                    -(action_counterfactual_values - node_value) * weight
                 )
             # sampled_advantages = torch.clamp(sampled_advantages, min=-1e6, max=1e6)
             self.advantage_memories[player].add(
@@ -188,8 +184,9 @@ class DeepPokerSolver:
             for player in (0, 1):
                 self.advantage_nets[player].reset_weights()
                 start = time()
+                optimizer = torch.optim.Adam(self.advantage_nets[player].parameters(), lr=1e-4)
                 for _ in range(self.network_training_iterations):
-                    self.train_advantage_net(player)
+                    self.train_advantage_net(player, optimizer)
                 end = time()
                 print(f"Advantage network training time: {end - start}")
             start = time()
@@ -199,8 +196,7 @@ class DeepPokerSolver:
             print(f"Strategy network training time: {end - start}")
             self.performed_iterations += 1
 
-    def train_advantage_net(self, player):
-        optimizer = self.advantage_optimizers[player]
+    def train_advantage_net(self, player, optimizer):
         memory = self.advantage_memories[player]
         net = self.advantage_nets[player]
         if len(memory) < self.batch_size:
@@ -287,6 +283,10 @@ class DeepPokerSolver:
             index = torch.argmax(regrets)
             strategy[index] = 1.0
             return strategy
+            """return (
+                torch.ones(regrets.shape, device=self.device, dtype=torch.float32)
+                / regrets.shape[0]
+            )"""
         strategy[positive_regrets] += regrets[positive_regrets] / positive_regrets_sum
         return strategy
 
