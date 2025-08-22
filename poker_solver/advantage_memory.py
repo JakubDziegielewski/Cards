@@ -15,8 +15,8 @@ class AdvantageMemory:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         
         # Preallocate storage
-        self.cards = torch.zeros((capacity, num_cards), dtype=torch.int64, device=self.device)
-        self.bets = torch.zeros((capacity, num_bets), dtype=torch.int64, device=self.device)
+        self.cards = torch.zeros((capacity, num_cards), dtype=torch.int8, device=self.device)
+        self.bets = torch.zeros((capacity, num_bets), dtype=torch.int8, device=self.device)
         self.advantages = torch.zeros((capacity, num_actions), dtype=torch.float32, device=self.device)
         self.index = 0
         self.full = False
