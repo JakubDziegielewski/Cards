@@ -104,9 +104,9 @@ class DeepPokerSolver:
             ).to(self.device)
             with torch.no_grad():
                 outputs = net(input_card_tensor, bet_tensor).squeeze(0)
-            action_counterfactual_values = torch.zeros(3, device=self.device)
+            action_counterfactual_values = torch.zeros(3, device=self.device, dtype=torch.float32)
             if len(legal_actions) == 2:
-                strategy = torch.zeros(3, device=self.device)
+                strategy = torch.zeros(3, device=self.device, dtype=torch.float16)
                 strategy[:-1] = self.regret_matching(outputs[:-1])
                 action_counterfactual_values[-1] = float("nan")
             else:
@@ -151,7 +151,7 @@ class DeepPokerSolver:
             with torch.no_grad():
                 outputs = net(input_card_tensor, bet_tensor).squeeze(0)
             if legal_actions_number == 2:
-                strategy = torch.zeros(3, device=self.device)
+                strategy = torch.zeros(3, device=self.device, dtype=torch.float16)
                 strategy[:-1] = self.regret_matching(outputs[:-1])
                 strategy[-1] = float("nan")
             else:
@@ -228,7 +228,7 @@ class DeepPokerSolver:
 
     def get_strategy(self, hand_state: HandState, cards: np.ndarray) -> np.ndarray:
         betting_sequence = hand_state.get_bet_sequence()
-        cards_tensor = -torch.ones((1, 7), device=self.device, dtype=torch.long)
+        cards_tensor = -torch.ones((1, 7), device=self.device)
         cards_tensor[0][:2] = torch.tensor(
             [card.get_card_number() for card in cards], device=self.device
         )
@@ -247,7 +247,7 @@ class DeepPokerSolver:
     @staticmethod
     @cache
     def betting_sequence_to_tensor(betting_sequence: tuple) -> torch.Tensor:
-        result_tensor = -torch.ones((4, 6))
+        result_tensor = -torch.ones((4, 6), dtype=torch.int8)
         for i, betting_round in enumerate(betting_sequence):
             value = 2 if i < 2 else 4
             result_tensor[i] = DeepPokerSolver.betting_round_to_ints(
@@ -260,10 +260,8 @@ class DeepPokerSolver:
     def betting_round_to_ints(betting_round: str, value: int) -> list:
         result_list = [-1] * 6
         for i, action in enumerate(betting_round):
-            if i > 5:
-                pass
             result_list[i] = value if action == "B" else 0
-        return torch.tensor(result_list)
+        return torch.tensor(result_list, dtype=torch.int8)
 
     @cache
     def define_legal_actions(self, betting_round: str) -> tuple:
@@ -276,8 +274,8 @@ class DeepPokerSolver:
 
     def regret_matching(self, regrets) -> torch.Tensor:
         positive_regrets = torch.where(regrets > 0)
-        positive_regrets_sum = torch.sum(regrets[positive_regrets])
-        strategy = torch.zeros(regrets.shape, dtype=torch.float32, device=self.device)
+        positive_regrets_sum = torch.sum(regrets[positive_regrets]).item()
+        strategy = torch.zeros(regrets.shape, dtype=torch.float16, device=self.device)
         if positive_regrets_sum < 1e-8:
             index = torch.argmax(regrets)
             strategy[index] = 1.0
