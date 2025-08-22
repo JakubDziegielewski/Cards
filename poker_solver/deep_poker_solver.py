@@ -205,7 +205,8 @@ class DeepPokerSolver:
         masks = (~torch.isnan(advantages)).float()
         advantages[torch.isnan(advantages)] = 0.0
         preds = net(cards_tensors, bet_tensors)
-        loss = ((preds - advantages) ** 2 * masks).sum() / masks.sum()
+        loss_func = nn.MSELoss()
+        loss = loss_func(preds * masks, advantages)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -221,7 +222,8 @@ class DeepPokerSolver:
         masks = (~torch.isnan(strategies)).float()
         strategies[torch.isnan(strategies)] = 0.0  # fill NaNs so loss computation works
         preds = net(cards_tensors, bet_tensors)
-        loss = ((preds - strategies) ** 2 * masks).sum() / masks.sum()
+        loss_func = nn.MSELoss()
+        loss = loss_func(preds * masks, strategies * masks)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
