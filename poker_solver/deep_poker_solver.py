@@ -1,4 +1,3 @@
-from deck.deck import Deck
 from poker_solver.deep_cfr_model import DeepCFRModel
 from poker_solver.deep_strategy_model import DeepStrategyModel
 from poker_solver.advantage_memory import AdvantageMemory
@@ -27,15 +26,14 @@ class DeepPokerSolver:
         traversals: int = 10_000,
         network_training_iterations: int = 32_000,
     ):
-        self.card_embeddings = nn.ModuleList(
-            [CardEmbedding(dim) for _ in range(ncardtypes)]
-        )
         self.advantage_nets = [
             DeepCFRModel(
                 ncardtypes=ncardtypes,
                 nbets=nbets,
                 nactions=nactions,
-                card_embeddings=self.card_embeddings,
+                card_embeddings=nn.ModuleList(
+            [CardEmbedding(dim) for _ in range(ncardtypes)]
+        ),
             )
             for _ in range(num_players)
         ]
@@ -50,14 +48,18 @@ class DeepPokerSolver:
                 ncardtypes=ncardtypes,
                 nbets=nbets,
                 nactions=nactions,
-                card_embeddings=self.card_embeddings,
+                card_embeddings=nn.ModuleList(
+            [CardEmbedding(dim) for _ in range(ncardtypes)]
+        ),
             ).cuda()
             if self.device == "cuda"
             else DeepStrategyModel(
                 ncardtypes=ncardtypes,
                 nbets=nbets,
                 nactions=nactions,
-                card_embeddings=self.card_embeddings,
+                card_embeddings=nn.ModuleList(
+            [CardEmbedding(dim) for _ in range(ncardtypes)]
+        ),
             )
         )
         self.advantage_memories = [
@@ -100,8 +102,6 @@ class DeepPokerSolver:
             bet_tensor = DeepPokerSolver.betting_sequence_to_tensor(
                 betting_sequence
             ).to(self.device)
-            if torch.isnan(input_card_tensor).any() or torch.isnan(bet_tensor).any():
-                print("NaNs in input!")
             with torch.no_grad():
                 outputs = net(input_card_tensor, bet_tensor).squeeze(0)
             action_counterfactual_values = torch.zeros(3, device=self.device)
@@ -181,10 +181,9 @@ class DeepPokerSolver:
                     game_environment.return_cards()
                 end = time()
                 print(f"Traversals time: {end - start}")
-            for player in (0, 1):
                 self.advantage_nets[player].reset_weights()
-                start = time()
                 optimizer = torch.optim.Adam(self.advantage_nets[player].parameters(), lr=1e-4)
+                start = time()
                 for _ in range(self.network_training_iterations):
                     self.train_advantage_net(player, optimizer)
                 end = time()
