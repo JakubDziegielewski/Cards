@@ -94,21 +94,25 @@ class Player:
             #    "bet": "3"
             #}
             #chosen_action = lookup_table[action]
-            if self.id == 0:
+            if self.id == 2:
                 strategy = self.decision_model.get_strategy(hand_state, self.cards)
                 if len(legal_actions) == 2 and len(strategy) == 3:
                     strategy[1] += strategy[2]
                     strategy = strategy[:2]
-                index = np.where(strategy == np.max(strategy))
-                action = legal_actions[index[0][0]]
+                #index = np.where(strategy == np.max(strategy))
+                #action = legal_actions[index[0][0]]
+                action = legal_actions[1]
             else:
                 strategy = self.decision_model.get_strategy(hand_state, self.cards)
-                threshold = 0.08
+                threshold = 0.01
                 mask = strategy < threshold
                 removed_mass = np.sum(strategy[mask])
                 strategy[mask] = 0
                 max_index = np.argmax(strategy)
                 strategy[max_index] += removed_mass
+                if "check" in legal_actions:
+                    strategy[1] += strategy[0]
+                    strategy[0] = 0
                 if len(legal_actions) == 2 and len(strategy) == 3:
                     strategy[1] += strategy[2]
                     strategy = strategy[:2]
