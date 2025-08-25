@@ -10,5 +10,6 @@ class GameState:
         self.current_dealer = (self.current_dealer + 1) % self.players.size
     
     def __repr__(self):
-        return f"{np.array2string(self.players, separator='\n')};\ncurrent dealer: {self.current_dealer}"
+        array_string = np.array2string(self.players, separator='\n')
+        return f"{array_string}; current dealer: {self.current_dealer}"
         
